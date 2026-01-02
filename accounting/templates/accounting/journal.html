@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journal Register - ICAI Format</title>
+    {% load static %}
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --border: #e2e8f0;
+            --bg-header: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--text-main);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--border);
+            padding: 12px;
+            vertical-align: top;
+        }
+
+        th {
+            background: var(--bg-header);
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Column Widths */
+        .col-date {
+            width: 12%;
+            text-align: center;
+        }
+
+        .col-particulars {
+            width: 58%;
+        }
+
+        .col-lf {
+            width: 6%;
+            text-align: center;
+        }
+
+        .col-amount {
+            width: 12%;
+            text-align: right;
+        }
+
+        /* Particulars Formatting */
+        .particulars-debit {
+            font-weight: 600;
+        }
+
+        .particulars-credit {
+            padding-left: 40px;
+            font-weight: 600;
+        }
+
+        .particulars-narration {
+            padding-left: 40px;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 4px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+        }
+
+        .dr-suffix {
+            float: right;
+            margin-right: 10px;
+        }
+
+        .to-prefix {
+            margin-right: 5px;
+        }
+
+        /* Remove inner borders for cleaner look if desired, but standard usually has grid */
+        tr.entry-spacer td {
+            border: none;
+            padding: 10px;
+            background: #f1f5f9;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+
+            .back-link {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Journal Register</h1>
+            <div>
+                <a href="{% url 'accounting:export_journal_pdf' %}" class="back-link" style="margin-right: 20px;">⬇
+                    Export PDF</a>
+                <a href="{% url 'accounting:index' %}" class="back-link">← Back to Dashboard</a>
+            </div>
+        </header>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-date">Date</th>
+                    <th class="col-particulars">Particulars</th>
+                    <th class="col-lf">L.F.</th>
+                    <th class="col-amount">Debit (₹)</th>
+                    <th class="col-amount">Credit (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                {% for line in entry.lines.all %}
+                {% if line.debit > 0 %}
+                <!-- Debit Line -->
+                <tr>
+                    {% if forloop.first %}
+                    <td rowspan="{{ entry.lines.count|add:1 }}">{{ entry.transaction_date|date:"Y-m-d" }}</td>
+                    {% endif %}
+                    <td class="particulars-debit">
+                        {{ line.account_name }} <span class="dr-suffix">Dr.</span>
+                    </td>
+                    <td>{{ line.account_code }}</td>
+                    <td class="text-right">{{ line.debit }}</td>
+                    <td></td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+
+                {% for line in entry.lines.all %}
+                {% if line.credit > 0 %}
+                <!-- Credit Line -->
+                <tr>
+                    <td class="particulars-credit">
+                        <span class="to-prefix">To</span> {{ line.account_name }}
+                    </td>
+                    <td>{{ line.account_code }}</td>
+                    <td></td>
+                    <td class="text-right">{{ line.credit }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Narration Line -->
+                <tr>
+                    <td class="particulars-narration">
+                        (Being {{ entry.narration }})
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+
+                <!-- Spacer Row -->
+                <!-- <tr class="entry-spacer"><td colspan="5"></td></tr> -->
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px;">No posted entries found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
