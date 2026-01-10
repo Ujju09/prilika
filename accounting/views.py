@@ -21,6 +21,11 @@ def journal_view(request):
     
     return render(request, 'accounting/journal.html', {'entries': entries})
 
+def journal_detail(request, entry_id):
+    """Render the detailed view of a journal entry"""
+    entry = get_object_or_404(JournalEntry, id=entry_id)
+    return render(request, 'accounting/journal_detail.html', {'entry': entry})
+
 def export_journal_pdf(request):
     """Generate and download Journal PDF"""
     from django.http import FileResponse

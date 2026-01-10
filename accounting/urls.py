@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('journal/', views.journal_view, name='journal_view'),
     path('journal/export/', views.export_journal_pdf, name='export_journal_pdf'),
+    path('journal/<int:entry_id>/', views.journal_detail, name='journal_detail'),
     path('api/process/', views.process_transaction, name='process_transaction'),
     path('api/entries/', views.get_entries, name='get_entries'),
     path('api/entries/<int:entry_id>/logs/', views.get_entry_logs, name='get_entry_logs'),

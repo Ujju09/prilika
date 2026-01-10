@@ -64,6 +64,7 @@ You must be precise with numbers. You must follow Indian accounting standards an
 - CGST = Base × 0.09
 - SGST = Base × 0.09
 - Receivable = Total amount
+- Round only to 2 decimal places if necessary
 
 **Entry:**
 ```
@@ -228,7 +229,7 @@ Dr. SBI Current A/c        50,000
 - Indian number format: 1,00,000 = One Lakh = 100000
 - Remove commas before calculation
 - Always work with exact amounts, no rounding during intermediate steps
-- Final amounts round to nearest rupee (no paise for this business)
+- Final amounts should be precise to 2 decimal places; do not round to nearest rupee
 
 ---
 

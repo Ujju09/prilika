@@ -1,0 +1,174 @@
+{% extends 'accounting/journal.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px;">
+    <header>
+        <h1>Journal Entry Details</h1>
+        <div>
+            <a href="{% url 'accounting:journal_view' %}" class="back-link">← Back to Register</a>
+        </div>
+    </header>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+        <!-- Left Column: Transaction Details -->
+        <div>
+            <!-- Basic Info Card -->
+            <div
+                style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <div>
+                        <h2 style="margin: 0; font-size: 18px; color: var(--text-main);">{{ entry.entry_number }}</h2>
+                        <div style="color: var(--text-muted); font-size: 14px;">
+                            {{ entry.transaction_date|date:"F d, Y"}}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="
+                            padding: 4px 12px;
+                            border-radius: 9999px;
+                            font-size: 12px;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            background: {{ entry.status_bg_color }};
+                            color: {{ entry.status_color }};
+                        ">
+                            {{ entry.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label
+                        style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">NARRATION</label>
+                    <div style="font-size: 16px;">{{ entry.narration }}</div>
+                </div>
+
+                {% if entry.reference %}
+                <div style="margin-bottom: 20px;">
+                    <label
+                        style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">REFERENCE</label>
+                    <div>{{ entry.reference }}</div>
+                </div>
+                {% endif %}
+
+                <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">SOURCE
+                        INPUT</label>
+                    <div
+                        style="background: #f8fafc; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 13px;">
+                        {{ entry.source_text }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Journal Lines -->
+            <div
+                style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 15px;">Transaction Lines</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">Account</th>
+                            <th style="width: 15%;">Code</th>
+                            <th style="width: 17%; text-align: right;">Debit (₹)</th>
+                            <th style="width: 17%; text-align: right;">Credit (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in entry.lines.all %}
+                        <tr>
+                            <td>
+                                {{ line.account_name }}
+                                {% if line.debit > 0 %}<span class="dr-suffix">Dr.</span>{% endif %}
+                            </td>
+                            <td style="text-align: center;">{{ line.account_code }}</td>
+                            <td style="text-align: right;">{% if line.debit > 0 %}{{ line.debit }}{% endif %}</td>
+                            <td style="text-align: right;">{% if line.credit > 0 %}{{ line.credit }}{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="background: #f8fafc; font-weight: 600;">
+                            <td colspan="2" style="text-align: right;">Total</td>
+                            <td style="text-align: right;">{{ entry.total_amount }}</td>
+                            <td style="text-align: right;">{{ entry.total_amount }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- AI Reasoning -->
+            <div style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px;">
+                <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 15px;">AI Analysis</h3>
+
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 14px; font-weight: 600; margin-right: 10px;">Confidence Score:</span>
+                        <div
+                            style="flex-grow: 1; height: 8px; background: #e2e8f0; border-radius: 4px; max-width: 200px; margin-right: 10px;">
+                            <div
+                                style="width: {% widthratio entry.ai_confidence 1 100 %}%; height: 100%; background: {{ entry.confidence_color }}; border-radius: 4px;">
+                            </div>
+                        </div>
+                        <span style="font-size: 14px; font-weight: 600;">
+                            {% widthratio entry.ai_confidence 1 100 %}%
+                        </span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label
+                        style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">REASONING</label>
+                    <div style="line-height: 1.5; font-size: 14px;">{{ entry.ai_reasoning|linebreaks }}</div>
+                </div>
+
+                {% if entry.ai_warnings %}
+                <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 4px; padding: 12px;">
+                    <strong style="color: #92400e; font-size: 14px;">Warnings:</strong>
+                    <ul style="margin: 5px 0 0 20px; color: #92400e; font-size: 14px;">
+                        {% for warning in entry.ai_warnings %}
+                        <li>{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Audit Logs -->
+        <div>
+            <div
+                style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: sticky; top: 20px;">
+                <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 20px;">Audit Log</h3>
+
+                <div style="border-left: 2px solid #e2e8f0; padding-left: 20px; margin-left: 10px;">
+                    {% for log in entry.logs.all %}
+                    <div style="position: relative; margin-bottom: 25px;">
+                        <!-- Timeline dot -->
+                        <div
+                            style="position: absolute; left: -27px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: white; border: 2px solid var(--primary);">
+                        </div>
+
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
+                            {{ log.timestamp|date:"M d, H:i:s" }}
+                        </div>
+                        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--text-main);">
+                            {{log.get_stage_display }}
+                        </div>
+                        <div style="font-size: 13px; color: #475569;">{{ log.message }}</div>
+
+                        {% if log.level == 'error' %}
+                        <div
+                            style="margin-top: 4px; font-size: 12px; color: #dc2626; background: #fee2e2; padding: 4px 8px; border-radius: 4px; display: inline-block;">
+                            Error Details Available
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div style="color: var(--text-muted); font-style: italic;">No logs available</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

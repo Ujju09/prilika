@@ -240,6 +240,40 @@ Validate the entry as specified in the skill. Output ONLY the JSON object, no ot
             )
             
             maker_output = maker_resp["parsed"]
+            
+            # --- Neuro-Symbolic Repair (Fix Math) ---
+            if maker_output.get("transaction_type") == "invoice":
+                try:
+                    # 1. Identify Total Amount from Debit line (Shree Cement)
+                    total_debit = Decimal("0")
+                    for line in maker_output["lines"]:
+                        if line.get("debit", 0) > 0:
+                            total_debit += Decimal(str(line["debit"]))
+                    
+                    if total_debit > 0:
+                        # 2. Calculate correct split
+                        breakdown = GSTBreakdown.from_inclusive_amount(total_debit)
+                        
+                        # 3. Repair the lines
+                        for line in maker_output["lines"]:
+                            ac = line.get("account_code")
+                            if ac == AccountCode.CFA_COMMISSION.value:
+                                line["credit"] = float(breakdown.base_amount)
+                            elif ac == AccountCode.CGST_PAYABLE.value:
+                                line["credit"] = float(breakdown.cgst)
+                            elif ac == AccountCode.SGST_PAYABLE.value:
+                                line["credit"] = float(breakdown.sgst)
+                                
+                        self._create_log(
+                            session_id=session_id,
+                            stage=AgentLog.Stage.MAKER,
+                            level=AgentLog.Level.INFO,
+                            message=f"Applied Math Repair: Base={breakdown.base_amount}, Tax={breakdown.cgst}"
+                        )
+                except Exception as repair_e:
+                    # Log but don't fail, let validator handle it
+                    print(f"Repair failed: {repair_e}")
+            # ----------------------------------------
             entry = JournalEntry(
                 transaction_date=date.fromisoformat(maker_output["transaction_date"]),
                 transaction_type=TransactionType(maker_output["transaction_type"]),

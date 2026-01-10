@@ -65,7 +65,7 @@ class JournalLine(BaseModel):
         if v is None:
             return Decimal("0")
         if isinstance(v, (int, float, str)):
-            return Decimal(str(v)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            return Decimal(str(v)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         return v
     
     @model_validator(mode='after')
@@ -170,15 +170,18 @@ class GSTBreakdown(BaseModel):
         Base = Total ÷ 1.18
         CGST = SGST = Base × 0.09
         """
-        base = (total / Decimal("1.18")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        cgst = (base * Decimal("0.09")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        sgst = (base * Decimal("0.09")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        base = (total / Decimal("1.18")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        cgst = (base * Decimal("0.09")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        sgst = (base * Decimal("0.09")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         
         # Adjust for rounding to ensure total matches
         calculated_total = base + cgst + sgst
         if calculated_total != total:
-            # Adjust SGST to absorb rounding difference
-            sgst = total - base - cgst
+            # Adjust SGST or Base to absorb rounding difference
+            # Prefer adjusting SGST if it's just a penny, or Base if it's structural
+            diff = total - calculated_total
+            # With decimals, diff should be very small (e.g. 0.01)
+            sgst += diff
         
         return cls(
             total_amount=total,

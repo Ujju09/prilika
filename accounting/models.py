@@ -60,6 +60,34 @@ class JournalEntry(models.Model):
     checker_warnings = models.JSONField(default=list, blank=True)
     checker_summary = models.TextField(blank=True)
     
+    @property
+    def confidence_color(self) -> str:
+        """Return color code based on confidence score (0.0 to 1.0)"""
+        if self.ai_confidence > 0.8:
+            return '#16a34a'  # Green
+        elif self.ai_confidence > 0.5:
+            return '#ca8a04'  # Yellow
+        else:
+            return '#dc2626'  # Red
+    
+    @property
+    def status_color(self) -> str:
+        """Return text color for status pill"""
+        if self.status == self.Status.POSTED:
+            return '#166534'  # Green-800
+        elif self.status == self.Status.APPROVED:
+            return '#1e40af'  # Blue-800
+        return '#475569'  # Slate-600
+
+    @property
+    def status_bg_color(self) -> str:
+        """Return background color for status pill"""
+        if self.status == self.Status.POSTED:
+            return '#dcfce7'  # Green-100
+        elif self.status == self.Status.APPROVED:
+            return '#dbeafe'  # Blue-100
+        return '#f1f5f9'  # Slate-100
+    
     # Review
     reviewed_by = models.CharField(max_length=100, blank=True)
     review_notes = models.TextField(blank=True)

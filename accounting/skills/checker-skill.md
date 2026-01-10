@@ -87,8 +87,10 @@ Only these accounts are valid:
 - Find the CFA Commission credit amount (Base)
 - CGST should be Base × 0.09
 - SGST should be Base × 0.09
-- Total (Debtor debit) should be Base × 1.18
-- Allow tolerance of ₹1 for rounding
+- Base amount = Total (Debtor debit) ÷ 1.18
+- Expected CGST = Base × 0.09
+- Expected SGST = Base × 0.09
+- Amounts should be precise to 2 decimal places (allow variation of 0.01-0.02 due to rounding)
 
 **If off by ₹1-10:** Flag as WARNING — "GST calculation slightly off. Expected CGST: X, Found: Y"
 

@@ -152,6 +152,7 @@
 </head>
 
 <body>
+    {% block content %}
     <div class="container">
         <header>
             <h1>Journal Register</h1>
@@ -177,7 +178,7 @@
                 {% for line in entry.lines.all %}
                 {% if line.debit > 0 %}
                 <!-- Debit Line -->
-                <tr>
+                <tr data-entry-id="{{ entry.id }}">
                     {% if forloop.first %}
                     <td rowspan="{{ entry.lines.count|add:1 }}">{{ entry.transaction_date|date:"Y-m-d" }}</td>
                     {% endif %}
@@ -194,7 +195,7 @@
                 {% for line in entry.lines.all %}
                 {% if line.credit > 0 %}
                 <!-- Credit Line -->
-                <tr>
+                <tr data-entry-id="{{ entry.id }}">
                     <td class="particulars-credit">
                         <span class="to-prefix">To</span> {{ line.account_name }}
                     </td>
@@ -206,7 +207,7 @@
                 {% endfor %}
 
                 <!-- Narration Line -->
-                <tr>
+                <tr data-entry-id="{{ entry.id }}">
                     <td class="particulars-narration">
                         (Being {{ entry.narration }})
                     </td>
@@ -215,8 +216,6 @@
                     <td></td>
                 </tr>
 
-                <!-- Spacer Row -->
-                <!-- <tr class="entry-spacer"><td colspan="5"></td></tr> -->
                 {% empty %}
                 <tr>
                     <td colspan="5" style="text-align: center; padding: 40px;">No posted entries found.</td>
@@ -225,6 +224,23 @@
             </tbody>
         </table>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Make rows clickable
+            const rows = document.querySelectorAll('tbody tr[data-entry-id]');
+            rows.forEach(row => {
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', function () {
+                    const entryId = this.dataset.entryId;
+                    if (entryId) {
+                        window.location.href = `/accounting/journal/${entryId}/`;
+                    }
+                });
+            });
+        });
+    </script>
+    {% endblock %}
 </body>
 
 </html>
