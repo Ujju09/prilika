@@ -10,6 +10,8 @@ from .models import JournalEntry, AgentLog
 from .service import process_and_save
 from .trial_balance_service import get_trial_balance
 from .pnl_service import get_profit_loss
+from .ledger_service import get_account_ledger
+
 
 
 def index(request):
@@ -296,3 +298,36 @@ def reject_entry(request, entry_id):
         return JsonResponse({"success": True})
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+def account_ledger(request, account_code):
+    """Render account ledger showing all transactions for an account"""
+    # Get date parameters (optional)
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    start_date = None
+    end_date = None
+    
+    if start_date_str:
+        try:
+            start_date = dt_date.fromisoformat(start_date_str)
+        except ValueError:
+            pass
+    
+    if end_date_str:
+        try:
+            end_date = dt_date.fromisoformat(end_date_str)
+        except ValueError:
+            pass
+    
+    # Get ledger data
+    ledger_data = get_account_ledger(account_code, start_date, end_date)
+    
+    # Handle account not found
+    if ledger_data.get('error'):
+        return render(request, 'accounting/account_ledger.html', {
+            'error': ledger_data['error']
+        })
+    
+    return render(request, 'accounting/account_ledger.html', ledger_data)

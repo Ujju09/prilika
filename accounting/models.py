@@ -30,6 +30,8 @@ class JournalEntry(models.Model):
         EXPENSE = 'expense', 'Expense'
         DRAWINGS = 'drawings', 'Drawings'
         CAPITAL = 'capital', 'Capital'
+        GST_PAYMENT = 'gst_payment', 'GST Payment'
+
     
     # Entry identification
     entry_number = models.CharField(max_length=50, unique=True, blank=True)

@@ -187,6 +187,17 @@
             margin-top: 20px;
         }
 
+        .account-link {
+            text-decoration: none;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+
+        .account-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+
         @media print {
             body {
                 background: white;
@@ -250,7 +261,12 @@
                 {% if income_accounts %}
                 {% for account in income_accounts %}
                 <tr class="account-row">
-                    <td>{{ account.name }} ({{ account.code }})</td>
+                    <td>
+                        <a href="{% url 'accounting:account_ledger' account.code %}" class="account-link">
+                            {{ account.name }}
+                        </a>
+                        ({{ account.code }})
+                    </td>
                     <td class="col-amount">{{ account.amount|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
@@ -271,7 +287,12 @@
                 {% if expense_accounts %}
                 {% for account in expense_accounts %}
                 <tr class="account-row">
-                    <td>{{ account.name }} ({{ account.code }})</td>
+                    <td>
+                        <a href="{% url 'accounting:account_ledger' account.code %}" class="account-link">
+                            {{ account.name }}
+                        </a>
+                        ({{ account.code }})
+                    </td>
                     <td class="col-amount">{{ account.amount|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}

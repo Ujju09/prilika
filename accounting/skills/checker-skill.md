@@ -120,7 +120,7 @@ Only these accounts are valid:
 
 **Required:**
 - transaction_date (valid date format)
-- transaction_type (one of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital)
+- transaction_type (one of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital, gst_payment)
 - narration (non-empty string)
 - lines (at least 2 lines)
 
@@ -165,12 +165,29 @@ Only these accounts are valid:
 | expense | Expense Account (Dr), Bank (Cr) |
 | drawings | Owner's Drawings (Dr), Bank (Cr) |
 | capital | Bank (Dr), Owner's Capital (Cr) |
+| gst_payment | CGST Payable (Dr), SGST Payable (Dr), Bank (Cr) |
 
 **CRITICAL:** A003-SD (Security Deposit) should NEVER appear in invoice, receipt, or receipt_with_tds transactions!
 
 **If Security Deposit used in invoice/receipt:** Flag as ERROR — "Security Deposit account (A003-SD) cannot be used for invoice or payment transactions. Use Commission Receivable (A003-CR) instead."
 
 **If mismatch:** Flag as WARNING — "Transaction type is X but accounts suggest Y"
+
+---
+
+### 8a. GST Payment Specific Validation
+
+**Rule:** For gst_payment transaction type, verify equal split
+
+**How to check:**
+- Entry must have exactly 2 debit lines (CGST and SGST)
+- Entry must have exactly 1 credit line (Bank)
+- CGST Payable debit amount must equal SGST Payable debit amount (allow difference of 0.01 for rounding)
+- Bank credit must equal sum of CGST + SGST debits
+
+**If CGST ≠ SGST:** Flag as ERROR — "GST payment must split equally. CGST: X, SGST: Y"
+
+**If difference > 0.01:** Flag as WARNING — "GST split has minor rounding difference: X vs Y"
 
 ---
 

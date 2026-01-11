@@ -254,6 +254,51 @@ Dr. SBI Current A/c        50,000
 
 ---
 
+### 8. GST Payment (Tax Payment to Government)
+
+**Trigger phrases:** "paid GST", "GST payment", "paid tax", "tax payment", "paid CGST and SGST", "GST for [month]"
+
+**Logic:**
+- Total payment amount is split equally between CGST and SGST
+- Both tax payable accounts are debited (reduces liability)
+- Bank is credited (reduces cash)
+- Split precisely to 2 decimal places (allow decimal splits like 10,182.50 each)
+
+**Entry:**
+```
+Dr. CGST Payable           [Amount ÷ 2]
+Dr. SGST Payable           [Amount ÷ 2]
+    Cr. SBI Current A/c        [Amount]
+```
+
+**Example:**
+Input: "Paid 20,364 as GST for the month of June"
+- Total = 20,364
+- CGST = 20,364 ÷ 2 = 10,182.00
+- SGST = 20,364 ÷ 2 = 10,182.00
+
+Entry:
+```
+Dr. CGST Payable           10,182.00
+Dr. SGST Payable           10,182.00
+    Cr. SBI Current A/c        20,364.00
+```
+
+**Example (Odd Amount):**
+Input: "Paid 10,001 as GST for July"
+- Total = 10,001
+- CGST = 10,001 ÷ 2 = 5,000.50
+- SGST = 10,001 ÷ 2 = 5,000.50
+
+Entry:
+```
+Dr. CGST Payable            5,000.50
+Dr. SGST Payable            5,000.50
+    Cr. SBI Current A/c        10,001.00
+```
+
+---
+
 ## Number Parsing Rules
 
 - Indian number format: 1,00,000 = One Lakh = 100000
@@ -297,7 +342,9 @@ For every transaction, output a JSON object with this structure:
 ### Field Rules
 
 - **transaction_date:** Use date if mentioned, otherwise use today's date
-- **transaction_type:** One of the 6 types defined above
+- **transaction_type:** One of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital, gst_payment
+  - Use `gst_payment` when the transaction is explicitly about paying GST/tax to the government
+  - Use `expense` for operational expenses (rake, godown, misc)
 - **narration:** Clean, professional narration suitable for books
 - **reference:** Extract invoice number, month reference, etc. if present
 - **lines:** Array of debit/credit lines. Each line has either debit > 0 OR credit > 0, never both.

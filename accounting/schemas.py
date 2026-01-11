@@ -20,6 +20,8 @@ class TransactionType(str, Enum):
     EXPENSE = "expense"
     DRAWINGS = "drawings"
     CAPITAL = "capital"
+    GST_PAYMENT = "gst_payment"
+
 
 
 class AccountCode(str, Enum):

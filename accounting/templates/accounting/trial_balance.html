@@ -177,6 +177,17 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
+        .account-link {
+            text-decoration: none;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+
+        .account-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+
         @media print {
             body {
                 background: white;
@@ -249,7 +260,12 @@
                 {% for account in accounts_by_type|lookup:acc_type %}
                 <tr>
                     <td class="col-code">{{ account.code }}</td>
-                    <td>{{ account.name }}</td>
+                    <td>
+                        <a href="{% url 'accounting:account_ledger' account.code %}"
+                            style="text-decoration: none; color: var(--primary);">
+                            {{ account.name }}
+                        </a>
+                    </td>
                     <td class="col-amount amount-cell">
                         {% if account.debit_balance > 0 %}
                         {{ account.debit_balance|floatformat:2 }}

@@ -153,7 +153,8 @@ function addFeedItem(type, data) {
         `;
     } else if (type === 'error') {
         item.className += ' error';
-        contentHtml = `<div style="color: var(--danger)">${data.errors.join('<br>')}</div>`;
+        const errorList = data.errors || ['An unknown error occurred'];
+        contentHtml = `<div style="color: var(--danger)">${errorList.join('<br>')}</div>`;
     } else if (type === 'system') {
         contentHtml = `<div class="text-secondary">${data.message}</div>`;
     }
