@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trial Balance - ICAI Format</title>
+    {% load static %}
+    {% load accounting_extras %}
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --border: #e2e8f0;
+            --bg-header: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--text-main);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .date-info {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        .balance-status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .balance-status.balanced {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .balance-status.unbalanced {
+            background: #fee2e2;
+            color: var(--error);
+        }
+
+        .date-filter {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-header);
+            border-radius: 6px;
+        }
+
+        .date-filter input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .date-filter button {
+            padding: 8px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .date-filter button:hover {
+            background: #1d4ed8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--border);
+            padding: 12px;
+        }
+
+        th {
+            background: var(--bg-header);
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .col-code {
+            width: 12%;
+            text-align: center;
+        }
+
+        .col-name {
+            width: 50%;
+        }
+
+        .col-amount {
+            width: 19%;
+            text-align: right;
+        }
+
+        .account-type-header {
+            background: #cbd5e1;
+            font-weight: 700;
+            text-align: left;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .total-row {
+            background: var(--bg-header);
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .amount-cell {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+
+            .back-link,
+            .date-filter {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Trial Balance</h1>
+            <div class="header-actions">
+                <a href="{% url 'accounting:export_trial_balance_pdf' %}?as_of_date={{ as_of_date|date:'Y-m-d' }}"
+                    class="back-link">⬇ Export PDF</a>
+                <a href="{% url 'accounting:index' %}" class="back-link">← Back to Dashboard</a>
+            </div>
+        </header>
+
+        <div class="date-info">
+            As of: {{ as_of_date|date:"d F Y" }}
+        </div>
+
+        <!-- Date Filter Form -->
+        <form method="get" class="date-filter">
+            <label for="as_of_date">Select Date:</label>
+            <input type="date" id="as_of_date" name="as_of_date" value="{{ as_of_date|date:'Y-m-d' }}">
+            <button type="submit">Update</button>
+        </form>
+
+        <!-- Balance Status -->
+        <div class="balance-status {% if is_balanced %}balanced{% else %}unbalanced{% endif %}">
+            {% if is_balanced %}
+            ✓ Trial Balance is Balanced: Total Debits = Total Credits = ₹{{ total_debit|floatformat:2 }}
+            {% else %}
+            ⚠ Trial Balance is NOT Balanced | Debits: ₹{{ total_debit|floatformat:2 }} | Credits:
+            ₹{{ total_credit|floatformat:2 }} | Difference: ₹{{ difference|floatformat:2 }}
+            {% endif %}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-code">Account Code</th>
+                    <th class="col-name">Account Name</th>
+                    <th class="col-amount">Debit Balance (₹)</th>
+                    <th class="col-amount">Credit Balance (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acc_type in account_type_order %}
+                {% if accounts_by_type|lookup:acc_type %}
+                <!-- Account Type Header -->
+                <tr>
+                    <td colspan="4" class="account-type-header">{{ account_type_labels|lookup:acc_type }}</td>
+                </tr>
+
+                <!-- Accounts in this type -->
+                {% for account in accounts_by_type|lookup:acc_type %}
+                <tr>
+                    <td class="col-code">{{ account.code }}</td>
+                    <td>{{ account.name }}</td>
+                    <td class="col-amount amount-cell">
+                        {% if account.debit_balance > 0 %}
+                        {{ account.debit_balance|floatformat:2 }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="col-amount amount-cell">
+                        {% if account.credit_balance > 0 %}
+                        {{ account.credit_balance|floatformat:2 }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+                {% endfor %}
+
+                <!-- Total Row -->
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: right;">TOTAL</td>
+                    <td class="col-amount amount-cell">{{ total_debit|floatformat:2 }}</td>
+                    <td class="col-amount amount-cell">{{ total_credit|floatformat:2 }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>

@@ -17,6 +17,7 @@ class TransactionType(str, Enum):
     RECEIPT = "receipt"
     RECEIPT_WITH_TDS = "receipt_with_tds"
     SALARY = "salary"
+    EXPENSE = "expense"
     DRAWINGS = "drawings"
     CAPITAL = "capital"
 
@@ -25,12 +26,17 @@ class AccountCode(str, Enum):
     """Valid account codes from Chart of Accounts"""
     SBI_CURRENT = "A001"
     ICICI = "A002"
-    SHREE_CEMENT = "A003"
+    SHREE_CEMENT = "A003"  # DEPRECATED - kept for backward compatibility
+    SHREE_CEMENT_SECURITY_DEPOSIT = "A003-SD"
+    SHREE_CEMENT_COMMISSION_RECEIVABLE = "A003-CR"
     TDS_RECEIVABLE = "A004"
     CGST_PAYABLE = "L001"
     SGST_PAYABLE = "L002"
     CFA_COMMISSION = "I001"
     SALARY_EXPENSE = "E001"
+    RAKE_EXPENSE = "E002"
+    GODOWN_EXPENSE = "E003"
+    MISC_EXPENSE = "E004"
     OWNER_CAPITAL = "EQ001"
     OWNER_DRAWINGS = "EQ002"
 
@@ -38,12 +44,17 @@ class AccountCode(str, Enum):
 ACCOUNT_NAMES = {
     AccountCode.SBI_CURRENT: "SBI Current A/c",
     AccountCode.ICICI: "ICICI A/c",
-    AccountCode.SHREE_CEMENT: "Shree Cement A/c",
+    AccountCode.SHREE_CEMENT: "Shree Cement A/c",  # DEPRECATED
+    AccountCode.SHREE_CEMENT_SECURITY_DEPOSIT: "Shree Cement - Security Deposit",
+    AccountCode.SHREE_CEMENT_COMMISSION_RECEIVABLE: "Shree Cement - Commission Receivable",
     AccountCode.TDS_RECEIVABLE: "TDS Receivable",
     AccountCode.CGST_PAYABLE: "CGST Payable",
     AccountCode.SGST_PAYABLE: "SGST Payable",
     AccountCode.CFA_COMMISSION: "CFA Commission",
     AccountCode.SALARY_EXPENSE: "Salary Expense",
+    AccountCode.RAKE_EXPENSE: "Rake Expense",
+    AccountCode.GODOWN_EXPENSE: "Godown Expense",
+    AccountCode.MISC_EXPENSE: "Miscellaneous Expense",
     AccountCode.OWNER_CAPITAL: "Owner's Capital",
     AccountCode.OWNER_DRAWINGS: "Owner's Drawings",
 }

@@ -27,6 +27,7 @@ class JournalEntry(models.Model):
         RECEIPT = 'receipt', 'Receipt'
         RECEIPT_WITH_TDS = 'receipt_with_tds', 'Receipt with TDS'
         SALARY = 'salary', 'Salary'
+        EXPENSE = 'expense', 'Expense'
         DRAWINGS = 'drawings', 'Drawings'
         CAPITAL = 'capital', 'Capital'
     
@@ -225,6 +226,7 @@ class Account(models.Model):
     code = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
     account_type = models.CharField(max_length=20, choices=AccountType.choices)
+    account_subtype = models.CharField(max_length=50, blank=True, help_text="Subtype for finer classification (e.g., 'sundry_debtors', 'security_deposit')")
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     
@@ -235,6 +237,15 @@ class Account(models.Model):
     
     def __str__(self):
         return f"{self.code} - {self.name}"
+    
+    @property
+    def is_current_asset(self) -> bool:
+        """Check if this is a current asset for balance sheet classification"""
+        if self.account_type != 'asset':
+            return False
+        # Non-current asset subtypes
+        non_current_subtypes = ['security_deposit', 'fixed_asset', 'long_term_investment']
+        return self.account_subtype not in non_current_subtypes
     
     @property
     def balance(self) -> Decimal:
@@ -261,27 +272,43 @@ class Account(models.Model):
     def setup_chart_of_accounts(cls):
         """Create the standard chart of accounts"""
         accounts = [
-            ('A001', 'SBI Current A/c', 'asset', 'Primary bank account'),
-            ('A002', 'ICICI Current A/c', 'asset', 'Secondary bank account'),
-            ('A003', 'Shree Cement A/c', 'asset', 'Receivable from Shree Cement'),
-            ('A004', 'TDS Receivable', 'asset', 'Tax deducted at source by payers'),
-            ('L001', 'CGST Payable', 'liability', 'Central GST collected'),
-            ('L002', 'SGST Payable', 'liability', 'State GST collected'),
-            ('I001', 'CFA Commission', 'income', 'Commission income from CFA services'),
-            ('E001', 'Salary Expense', 'expense', 'Employee salaries'),
-            ('EQ001', "Owner's Capital", 'equity', 'Capital contributed by owner'),
-            ('EQ002', "Owner's Drawings", 'equity', 'Withdrawals by owner'),
+            ('A001', 'SBI Current A/c', 'asset', 'cash_and_bank', 'Primary bank account'),
+            ('A002', 'ICICI Current A/c', 'asset', 'cash_and_bank', 'Secondary bank account'),
+            ('A003', 'Shree Cement A/c', 'asset', '', 'DEPRECATED - Split into A003-SD and A003-CR'),
+            ('A003-SD', 'Shree Cement - Security Deposit', 'asset', 'security_deposit', 'Security deposit with Shree Cement - Non-Current Asset'),
+            ('A003-CR', 'Shree Cement - Commission Receivable', 'asset', 'sundry_debtors', 'Commission receivable from Shree Cement - Current Asset'),
+            ('A004', 'TDS Receivable', 'asset', 'tax_receivable', 'Tax deducted at source by payers'),
+            ('L001', 'CGST Payable', 'liability', 'tax_payable', 'Central GST collected'),
+            ('L002', 'SGST Payable', 'liability', 'tax_payable', 'State GST collected'),
+            ('I001', 'CFA Commission', 'income', 'service_income', 'Commission income from CFA services'),
+            ('E001', 'Salary Expense', 'expense', 'salary', 'Employee salaries'),
+            ('E002', 'Rake Expense', 'expense', 'operational', 'Expenses related to rake operations and handling'),
+            ('E003', 'Godown Expense', 'expense', 'operational', 'Expenses related to godown/warehouse operations'),
+            ('E004', 'Miscellaneous Expense', 'expense', 'other', 'Other miscellaneous expenses not covered by specific categories'),
+            ('EQ001', "Owner's Capital", 'equity', 'capital', 'Capital contributed by owner'),
+            ('EQ002', "Owner's Drawings", 'equity', 'drawings', 'Withdrawals by owner'),
         ]
         
-        for code, name, acc_type, desc in accounts:
-            cls.objects.get_or_create(
+        for code, name, acc_type, subtype, desc in accounts:
+            account, created = cls.objects.get_or_create(
                 code=code,
                 defaults={
                     'name': name,
                     'account_type': acc_type,
-                    'description': desc
+                    'account_subtype': subtype,
+                    'description': desc,
+                    'is_active': False if code == 'A003' else True  # Mark old A003 as inactive
                 }
             )
+            # Update existing accounts with new subtypes if they don't have one
+            if not created and not account.account_subtype and subtype:
+                account.account_subtype = subtype
+                account.save()
+            # Deactivate A003 if it already exists
+            if not created and code == 'A003':
+                account.is_active = False
+                account.description = desc
+                account.save()
 
 
 class AgentLog(models.Model):

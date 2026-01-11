@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Q
@@ -8,6 +8,9 @@ from datetime import date as dt_date
 
 from .models import JournalEntry, AgentLog
 from .service import process_and_save
+from .trial_balance_service import get_trial_balance
+from .pnl_service import get_profit_loss
+
 
 def index(request):
     """Render the main UI"""
@@ -28,7 +31,6 @@ def journal_detail(request, entry_id):
 
 def export_journal_pdf(request):
     """Generate and download Journal PDF"""
-    from django.http import FileResponse
     from .pdf_service import generate_journal_pdf
     
     entries = JournalEntry.objects.filter(
@@ -42,6 +44,109 @@ def export_journal_pdf(request):
         as_attachment=True,
         filename=f"journal_register_{dt_date.today()}.pdf"
     )
+
+def trial_balance_view(request):
+    """Render Trial Balance in ICAI format"""
+    # Get date parameter (default to today)
+    as_of_date_str = request.GET.get('as_of_date')
+    if as_of_date_str:
+        try:
+            as_of_date = dt_date.fromisoformat(as_of_date_str)
+        except ValueError:
+            as_of_date = dt_date.today()
+    else:
+        as_of_date = dt_date.today()
+    
+    # Get trial balance data
+    tb_data = get_trial_balance(as_of_date)
+    
+    return render(request, 'accounting/trial_balance.html', tb_data)
+
+def export_trial_balance_pdf(request):
+    """Generate and download Trial Balance PDF"""
+    from .trial_balance_pdf import generate_trial_balance_pdf
+    
+    # Get date parameter (default to today)
+    as_of_date_str = request.GET.get('as_of_date')
+    if as_of_date_str:
+        try:
+            as_of_date = dt_date.fromisoformat(as_of_date_str)
+        except ValueError:
+            as_of_date = dt_date.today()
+    else:
+        as_of_date = dt_date.today()
+    
+    # Get trial balance data
+    tb_data = get_trial_balance(as_of_date)
+    
+    buffer = generate_trial_balance_pdf(tb_data)
+    
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f"trial_balance_{as_of_date}.pdf"
+    )
+
+def profit_loss_view(request):
+    """Render Profit & Loss Statement in ICAI format"""
+    # Get date parameters
+    from_date_str = request.GET.get('from_date')
+    to_date_str = request.GET.get('to_date')
+    
+    from_date = None
+    if from_date_str:
+        try:
+            from_date = dt_date.fromisoformat(from_date_str)
+        except ValueError:
+            pass
+    
+    to_date = dt_date.today()
+    if to_date_str:
+        try:
+            to_date = dt_date.fromisoformat(to_date_str)
+        except ValueError:
+            to_date = dt_date.today()
+    
+    # Get P&L data
+    pnl_data = get_profit_loss(from_date, to_date)
+    
+    return render(request, 'accounting/profit_loss.html', pnl_data)
+
+def export_pnl_pdf(request):
+    """Generate and download P&L PDF"""
+    from .pnl_pdf import generate_pnl_pdf
+    
+    # Get date parameters
+    from_date_str = request.GET.get('from_date')
+    to_date_str = request.GET.get('to_date')
+    
+    from_date = None
+    if from_date_str:
+        try:
+            from_date = dt_date.fromisoformat(from_date_str)
+        except ValueError:
+            pass
+    
+    to_date = dt_date.today()
+    if to_date_str:
+        try:
+            to_date = dt_date.fromisoformat(to_date_str)
+        except ValueError:
+            to_date = dt_date.today()
+    
+    # Get P&L data
+    pnl_data = get_profit_loss(from_date, to_date)
+    
+    buffer = generate_pnl_pdf(pnl_data)
+    
+    filename = f"profit_loss_{from_date or 'inception'}_{to_date}.pdf"
+    
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=filename
+    )
+
 
 @csrf_exempt
 @require_http_methods(["POST"])

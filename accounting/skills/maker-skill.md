@@ -25,7 +25,8 @@ You must be precise with numbers. You must follow Indian accounting standards an
 |------|--------------|-------------|
 | A001 | SBI Current A/c | Primary bank account. Default for all transactions unless specified. |
 | A002 | ICICI Current A/c | Secondary bank account. Used only when explicitly mentioned. |
-| A003 | Shree Cement A/c | Receivable from Shree Cement. Debited when invoice raised, credited when payment received. |
+| A003-SD | Shree Cement - Security Deposit | **Non-Current Asset.** ₹25 lakh refundable security deposit. **NEVER use for invoices or receipts!** |
+| A003-CR | Shree Cement - Commission Receivable | **Current Asset.** Commission receivable from Shree Cement. Use for ALL invoice and payment transactions. |
 | A004 | TDS Receivable | Tax deducted at source by payers. Asset until adjusted against tax liability. |
 
 ### Liabilities
@@ -43,6 +44,9 @@ You must be precise with numbers. You must follow Indian accounting standards an
 | Code | Account Name | Description |
 |------|--------------|-------------|
 | E001 | Salary Expense | All salary payments to employees. |
+| E002 | Rake Expense | Expenses related to rake operations and handling. |
+| E003 | Godown Expense | Expenses related to godown/warehouse operations. |
+| E004 | Miscellaneous Expense | Other miscellaneous expenses not covered by specific categories. |
 
 ### Equity
 | Code | Account Name | Description |
@@ -68,10 +72,10 @@ You must be precise with numbers. You must follow Indian accounting standards an
 
 **Entry:**
 ```
-Dr. Shree Cement A/c       [Total Amount]
-    Cr. CFA Commission         [Base Amount]
-    Cr. CGST Payable           [CGST]
-    Cr. SGST Payable           [SGST]
+Dr. Shree Cement - Commission Receivable    [Total Amount]
+    Cr. CFA Commission                          [Base Amount]
+    Cr. CGST Payable                            [CGST]
+    Cr. SGST Payable                            [SGST]
 ```
 
 **Example:**
@@ -83,10 +87,10 @@ Input: "Raising invoice to Shree Cement for 1,18,000"
 
 Entry:
 ```
-Dr. Shree Cement A/c       1,18,000
-    Cr. CFA Commission         1,00,000
-    Cr. CGST Payable             9,000
-    Cr. SGST Payable             9,000
+Dr. Shree Cement - Commission Receivable    1,18,000
+    Cr. CFA Commission                          1,00,000
+    Cr. CGST Payable                              9,000
+    Cr. SGST Payable                              9,000
 ```
 
 ---
@@ -101,8 +105,8 @@ Dr. Shree Cement A/c       1,18,000
 
 **Entry:**
 ```
-Dr. SBI Current A/c        [Amount]
-    Cr. Shree Cement A/c       [Amount]
+Dr. SBI Current A/c                         [Amount]
+    Cr. Shree Cement - Commission Receivable    [Amount]
 ```
 
 **Example:**
@@ -110,8 +114,8 @@ Input: "Received from Shree Cement 1,18,000"
 
 Entry:
 ```
-Dr. SBI Current A/c        1,18,000
-    Cr. Shree Cement A/c       1,18,000
+Dr. SBI Current A/c                         1,18,000
+    Cr. Shree Cement - Commission Receivable    1,18,000
 ```
 
 ---
@@ -128,9 +132,9 @@ Dr. SBI Current A/c        1,18,000
 
 **Entry:**
 ```
-Dr. SBI Current A/c        [Cash Received]
-Dr. TDS Receivable         [TDS Amount]
-    Cr. Shree Cement A/c       [Total = Cash + TDS]
+Dr. SBI Current A/c                         [Cash Received]
+Dr. TDS Receivable                          [TDS Amount]
+    Cr. Shree Cement - Commission Receivable    [Total = Cash + TDS]
 ```
 
 **Example:**
@@ -141,9 +145,9 @@ Input: "Received from Shree Cement 1,12,100, TDS 5,900 deducted"
 
 Entry:
 ```
-Dr. SBI Current A/c        1,12,100
-Dr. TDS Receivable           5,900
-    Cr. Shree Cement A/c       1,18,000
+Dr. SBI Current A/c                         1,12,100
+Dr. TDS Receivable                            5,900
+    Cr. Shree Cement - Commission Receivable    1,18,000
 ```
 
 ---
@@ -174,7 +178,33 @@ Dr. Salary Expense         12,000
 
 ---
 
-### 5. Owner's Drawings (Personal Withdrawal)
+### 5. General Expenses (Rake, Godown, Miscellaneous)
+
+**Trigger phrases:** "for godown expense", "for rake expense", "for miscellaneous expense", "paid for godown", "paid for rake"
+
+**Logic:**
+- Increases the appropriate expense account
+- Decreases bank
+- Use E002 for Rake Expense, E003 for Godown Expense, E004 for Miscellaneous Expense
+
+**Entry:**
+```
+Dr. [Expense Account]      [Amount]
+    Cr. SBI Current A/c        [Amount]
+```
+
+**Example:**
+Input: "Took 10,000 from SBI Current A/c for Godown expense"
+
+Entry:
+```
+Dr. Godown Expense         10,000
+    Cr. SBI Current A/c        10,000
+```
+
+---
+
+### 6. Owner's Drawings (Personal Withdrawal)
 
 **Trigger phrases:** "sent to personal", "transferred to personal", "withdrew", "personal savings", "self transfer"
 
@@ -199,7 +229,7 @@ Dr. Owner's Drawings       15,000
 
 ---
 
-### 6. Capital Received
+### 7. Capital Received
 
 **Trigger phrases:** "received capital", "capital from", "invested", "brought in capital"
 
@@ -247,15 +277,15 @@ For every transaction, output a JSON object with this structure:
 ```json
 {
   "transaction_date": "YYYY-MM-DD",
-  "transaction_type": "invoice | receipt | receipt_with_tds | salary | drawings | capital",
+  "transaction_type": "invoice | receipt | receipt_with_tds | salary | expense | drawings | capital",
   "narration": "Clear description of the transaction",
   "reference": "Invoice number or reference if mentioned, else null",
   "lines": [
     {
-      "account_code": "A001",
-      "account_name": "SBI Current A/c",
-      "debit": 0,
-      "credit": 50000
+      "account_code": "A003-CR",
+      "account_name": "Shree Cement - Commission Receivable",
+      "debit": 50000,
+      "credit": 0
     }
   ],
   "reasoning": "Brief explanation of why these accounts were chosen",
@@ -308,7 +338,8 @@ For every transaction, output a JSON object with this structure:
 ## What NOT To Do
 
 1. **Never guess amounts** — if amount is unclear, set confidence low and add warning
-2. **Never create accounts not in the Chart of Accounts** — use only the 10 defined accounts
+2. **Never create accounts not in the Chart of Accounts** — use only the defined accounts
 3. **Never skip GST on invoices** — all invoices include GST
 4. **Never combine multiple transactions** — one input = one journal entry
 5. **Never do partial entries** — every entry must have equal debits and credits
+6. **CRITICAL: Never use A003-SD (Security Deposit) for invoices or receipts** — this account is ONLY for the security deposit itself. ALL invoice and payment transactions with Shree Cement must use A003-CR (Commission Receivable)

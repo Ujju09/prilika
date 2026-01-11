@@ -42,12 +42,16 @@ Only these accounts are valid:
 |------|--------------|------|
 | A001 | SBI Current A/c | Asset |
 | A002 | ICICI A/c | Asset |
-| A003 | Shree Cement A/c | Asset |
+| A003-SD | Shree Cement - Security Deposit | Asset (Non-Current) |
+| A003-CR | Shree Cement - Commission Receivable | Asset (Current) |
 | A004 | TDS Receivable | Asset |
 | L001 | CGST Payable | Liability |
 | L002 | SGST Payable | Liability |
 | I001 | CFA Commission | Income |
 | E001 | Salary Expense | Expense |
+| E002 | Rake Expense | Expense |
+| E003 | Godown Expense | Expense |
+| E004 | Miscellaneous Expense | Expense |
 | EQ001 | Owner's Capital | Equity |
 | EQ002 | Owner's Drawings | Equity |
 
@@ -73,7 +77,7 @@ Only these accounts are valid:
 **Rule:** Every account_code must exist in the Chart of Accounts
 
 **How to check:**
-- Verify each account_code is one of: A001, A002, A003, A004, L001, L002, I001, E001, EQ001, EQ002
+- Verify each account_code is one of: A001, A002, A003-SD, A003-CR, A004, L001, L002, I001, E001, E002, E003, E004, EQ001, EQ002
 
 **If fails:** Flag as ERROR — "Invalid account code: X"
 
@@ -116,7 +120,7 @@ Only these accounts are valid:
 
 **Required:**
 - transaction_date (valid date format)
-- transaction_type (one of: invoice, receipt, receipt_with_tds, salary, drawings, capital)
+- transaction_type (one of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital)
 - narration (non-empty string)
 - lines (at least 2 lines)
 
@@ -154,12 +158,17 @@ Only these accounts are valid:
 
 | Transaction Type | Expected Accounts |
 |-----------------|-------------------|
-| invoice | Shree Cement A/c (Dr), CFA Commission (Cr), CGST Payable (Cr), SGST Payable (Cr) |
-| receipt | Bank (Dr), Shree Cement A/c (Cr) |
-| receipt_with_tds | Bank (Dr), TDS Receivable (Dr), Shree Cement A/c (Cr) |
+| invoice | Shree Cement - Commission Receivable (Dr), CFA Commission (Cr), CGST Payable (Cr), SGST Payable (Cr) |
+| receipt | Bank (Dr), Shree Cement - Commission Receivable (Cr) |
+| receipt_with_tds | Bank (Dr), TDS Receivable (Dr), Shree Cement - Commission Receivable (Cr) |
 | salary | Salary Expense (Dr), Bank (Cr) |
+| expense | Expense Account (Dr), Bank (Cr) |
 | drawings | Owner's Drawings (Dr), Bank (Cr) |
 | capital | Bank (Dr), Owner's Capital (Cr) |
+
+**CRITICAL:** A003-SD (Security Deposit) should NEVER appear in invoice, receipt, or receipt_with_tds transactions!
+
+**If Security Deposit used in invoice/receipt:** Flag as ERROR — "Security Deposit account (A003-SD) cannot be used for invoice or payment transactions. Use Commission Receivable (A003-CR) instead."
 
 **If mismatch:** Flag as WARNING — "Transaction type is X but accounts suggest Y"
 
@@ -244,7 +253,7 @@ Only these accounts are valid:
   "transaction_type": "receipt",
   "lines": [
     {"account_code": "A001", "account_name": "SBI Current A/c", "debit": 100000, "credit": 0},
-    {"account_code": "A003", "account_name": "Shree Cement A/c", "debit": 0, "credit": 118000}
+    {"account_code": "A003-CR", "account_name": "Shree Cement - Commission Receivable", "debit": 0, "credit": 118000}
   ],
   "confidence": 0.90
 }
@@ -271,7 +280,7 @@ Only these accounts are valid:
 {
   "transaction_type": "invoice",
   "lines": [
-    {"account_code": "A003", "account_name": "Shree Cement A/c", "debit": 118000, "credit": 0},
+    {"account_code": "A003-CR", "account_name": "Shree Cement - Commission Receivable", "debit": 118000, "credit": 0},
     {"account_code": "I001", "account_name": "CFA Commission", "debit": 0, "credit": 100000},
     {"account_code": "L001", "account_name": "CGST Payable", "debit": 0, "credit": 10000},
     {"account_code": "L002", "account_name": "SGST Payable", "debit": 0, "credit": 8000}
@@ -302,7 +311,7 @@ Only these accounts are valid:
   "transaction_type": "receipt",
   "lines": [
     {"account_code": "A001", "account_name": "SBI Current A/c", "debit": 50000, "credit": 0},
-    {"account_code": "A003", "account_name": "Shree Cement A/c", "debit": 0, "credit": 50000}
+    {"account_code": "A003-CR", "account_name": "Shree Cement - Commission Receivable", "debit": 0, "credit": 50000}
   ],
   "confidence": 0.65,
   "warnings": ["Amount was ambiguous in input, assumed 50000"]
@@ -331,3 +340,4 @@ Only these accounts are valid:
 3. **Don't validate business logic beyond accounting** — that's for humans
 4. **Don't modify the entry** — only validate and report
 5. **Don't approve entries with any errors** — errors are blockers
+6. **Don't confuse A003-SD and A003-CR** — Security Deposit (SD) is for the deposit itself, Commission Receivable (CR) is for invoices/payments
