@@ -164,7 +164,7 @@ main {
     font-size: 1.1rem;
     resize: none;
     min-height: 80px;
-    text-align: center;
+    text-align: left;
 }
 
 .transaction-input:focus {

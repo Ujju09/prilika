@@ -17,9 +17,11 @@
         <div class="header-content">
             <div class="brand">Accounting AI</div>
             <nav>
+                <a href="{% url 'accounting:review_entries' %}" class="nav-link">Review</a>
                 <a href="{% url 'accounting:journal_view' %}" class="nav-link">Journal</a>
                 <a href="{% url 'accounting:trial_balance_view' %}" class="nav-link">Trial Balance</a>
                 <a href="{% url 'accounting:profit_loss_view' %}" class="nav-link">P&L</a>
+                <a href="{% url 'accounting:evals_view' %}" class="nav-link">Evals</a>
             </nav>
         </div>
     </header>

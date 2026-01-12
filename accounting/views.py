@@ -26,6 +26,15 @@ def journal_view(request):
     
     return render(request, 'accounting/journal.html', {'entries': entries})
 
+def review_entries(request):
+    """Render the Review page for non-posted entries"""
+    # Exclude posted entries - show everything else
+    entries = JournalEntry.objects.exclude(
+        status='posted'
+    ).prefetch_related('lines').order_by('-transaction_date', '-created_at')
+    
+    return render(request, 'accounting/review_entries.html', {'entries': entries})
+
 def journal_detail(request, entry_id):
     """Render the detailed view of a journal entry"""
     entry = get_object_or_404(JournalEntry, id=entry_id)
@@ -331,3 +340,194 @@ def account_ledger(request, account_code):
         })
     
     return render(request, 'accounting/account_ledger.html', ledger_data)
+
+
+def evals_view(request):
+    """Render the evals page for exporting agent behavior data"""
+    from django.db.models import Sum, Avg
+    
+    # Get statistics for display
+    total_entries = JournalEntry.objects.count()
+    avg_confidence = JournalEntry.objects.aggregate(avg=Avg('ai_confidence'))['avg'] or 0
+    
+    stats = {
+        'total_entries': total_entries,
+        'avg_confidence': avg_confidence,
+        'by_status': {}
+    }
+    
+    # Count by status
+    status_counts = JournalEntry.objects.values('status').annotate(count=Count('id'))
+    for item in status_counts:
+        stats['by_status'][item['status']] = item['count']
+    
+    return render(request, 'accounting/evals.html', {'stats': stats})
+
+
+@require_http_methods(["GET"])
+def export_evals_json(request):
+    """Export agent behavior data as JSON for evaluation and training"""
+    from django.utils import timezone
+    from decimal import Decimal
+    
+    # Get filter parameters
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    status_filter = request.GET.get('status')
+    min_confidence = request.GET.get('min_confidence')
+    transaction_type = request.GET.get('transaction_type')
+    
+    # Build query
+    entries_query = JournalEntry.objects.all().prefetch_related('lines', 'logs')
+    
+    filters_applied = {}
+    
+    if start_date_str:
+        try:
+            start_date = dt_date.fromisoformat(start_date_str)
+            entries_query = entries_query.filter(transaction_date__gte=start_date)
+            filters_applied['start_date'] = start_date_str
+        except ValueError:
+            pass
+    
+    if end_date_str:
+        try:
+            end_date = dt_date.fromisoformat(end_date_str)
+            entries_query = entries_query.filter(transaction_date__lte=end_date)
+            filters_applied['end_date'] = end_date_str
+        except ValueError:
+            pass
+    
+    if status_filter:
+        entries_query = entries_query.filter(status=status_filter)
+        filters_applied['status'] = status_filter
+    
+    if min_confidence:
+        try:
+            min_conf = float(min_confidence)
+            entries_query = entries_query.filter(ai_confidence__gte=min_conf)
+            filters_applied['min_confidence'] = min_conf
+        except ValueError:
+            pass
+    
+    if transaction_type:
+        entries_query = entries_query.filter(transaction_type=transaction_type)
+        filters_applied['transaction_type'] = transaction_type
+    
+    # Build export data
+    export_data = {
+        "export_metadata": {
+            "exported_at": timezone.now().isoformat(),
+            "total_entries": entries_query.count(),
+            "filters_applied": filters_applied
+        },
+        "entries": []
+    }
+    
+    for entry in entries_query.order_by('-transaction_date', '-created_at'):
+        # Build journal entry lines
+        lines_data = []
+        for line in entry.lines.all():
+            lines_data.append({
+                "account_code": line.account_code,
+                "account_name": line.account_name,
+                "debit": float(line.debit) if line.debit else 0,
+                "credit": float(line.credit) if line.credit else 0
+            })
+        
+        # Build agent logs
+        logs_data = []
+        for log in entry.logs.all().order_by('timestamp'):
+            log_entry = {
+                "timestamp": log.timestamp.isoformat(),
+                "stage": log.stage,
+                "level": log.level,
+                "message": log.message
+            }
+            
+            # Include prompt and completion if available
+            if log.prompt_sent:
+                log_entry["prompt"] = log.prompt_sent
+            if log.response_received:
+                log_entry["completion"] = log.response_received
+            
+            # Include token usage if available
+            if log.input_tokens is not None:
+                log_entry["tokens"] = {
+                    "input": log.input_tokens,
+                    "output": log.output_tokens
+                }
+            
+            if log.duration_ms is not None:
+                log_entry["duration_ms"] = log.duration_ms
+            
+            logs_data.append(log_entry)
+        
+        # Aggregate performance metrics
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_duration_ms = 0
+        
+        for log in entry.logs.all():
+            if log.input_tokens:
+                total_input_tokens += log.input_tokens
+            if log.output_tokens:
+                total_output_tokens += log.output_tokens
+            if log.duration_ms:
+                total_duration_ms += log.duration_ms
+        
+        # Build entry data
+        entry_data = {
+            "entry_id": str(entry.id),
+            "entry_number": entry.entry_number,
+            "transaction_date": entry.transaction_date.isoformat(),
+            "created_at": entry.created_at.isoformat(),
+            
+            "input": {
+                "source_text": entry.source_text,
+                "transaction_type": entry.transaction_type,
+                "reference": entry.reference
+            },
+            
+            "maker_output": {
+                "reasoning": entry.ai_reasoning,
+                "confidence": float(entry.ai_confidence),
+                "warnings": entry.ai_warnings,
+                "journal_entry": {
+                    "narration": entry.narration,
+                    "lines": lines_data
+                }
+            },
+            
+            "checker_output": {
+                "status": entry.checker_status,
+                "errors": entry.checker_errors,
+                "warnings": entry.checker_warnings,
+                "summary": entry.checker_summary
+            },
+            
+            "ground_truth": {
+                "final_status": entry.status,
+                "reviewed_by": entry.reviewed_by,
+                "review_notes": entry.review_notes,
+                "reviewed_at": entry.reviewed_at.isoformat() if entry.reviewed_at else None,
+                "posted_at": entry.posted_at.isoformat() if entry.posted_at else None
+            },
+            
+            "performance": {
+                "total_input_tokens": total_input_tokens,
+                "total_output_tokens": total_output_tokens,
+                "total_tokens": total_input_tokens + total_output_tokens,
+                "processing_time_ms": total_duration_ms
+            },
+            
+            "agent_logs": logs_data
+        }
+        
+        export_data["entries"].append(entry_data)
+    
+    # Return JSON response
+    response = JsonResponse(export_data, json_dumps_params={'indent': 2})
+    response['Content-Disposition'] = f'attachment; filename="agent_evals_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
+    
+    return response

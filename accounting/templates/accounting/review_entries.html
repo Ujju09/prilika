@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Entries - Accounting AI</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/accounting.css' %}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        .review-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .entries-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .entry-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .entry-card:hover {
+            border-color: var(--text-secondary);
+            transform: translateY(-2px);
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .entry-meta {
+            flex: 1;
+        }
+
+        .entry-number {
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .entry-date {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: var(--font-mono);
+        }
+
+        .status-draft {
+            background: rgba(161, 161, 170, 0.1);
+            color: #a1a1aa;
+        }
+
+        .status-flagged {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .status-pending_review {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+
+        .status-approved {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .status-rejected {
+            background: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+        }
+
+        .entry-narration {
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .entry-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .entry-amount {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .entry-indicators {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .confidence-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .confidence-bar {
+            width: 60px;
+            height: 6px;
+            background: var(--bg-input);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .confidence-high {
+            background: var(--success);
+        }
+
+        .confidence-medium {
+            background: var(--warning);
+        }
+
+        .confidence-low {
+            background: var(--danger);
+        }
+
+        .confidence-text {
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            min-width: 40px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-subtext {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .warning-indicator {
+            color: var(--warning);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="brand">Accounting AI</div>
+            <nav>
+                <a href="{% url 'accounting:index' %}" class="nav-link">Home</a>
+                <a href="{% url 'accounting:review_entries' %}" class="nav-link"
+                    style="color: var(--text-primary);">Review</a>
+                <a href="{% url 'accounting:journal_view' %}" class="nav-link">Journal</a>
+                <a href="{% url 'accounting:trial_balance_view' %}" class="nav-link">Trial Balance</a>
+                <a href="{% url 'accounting:profit_loss_view' %}" class="nav-link">P&L</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="review-container">
+        <div class="page-header">
+            <h1 class="page-title">Review Queue</h1>
+            <p class="page-subtitle">Journal entries pending review or approval ({{ entries.count }} total)</p>
+        </div>
+
+        {% if entries %}
+        <div class="entries-grid">
+            {% for entry in entries %}
+            <div class="entry-card" onclick="window.location.href='{% url 'accounting:journal_detail' entry.id %}'">
+                <div class="entry-header">
+                    <div class="entry-meta">
+                        <div class="entry-number">{{ entry.entry_number }}</div>
+                        <div class="entry-date">{{ entry.transaction_date|date:"d M Y" }}</div>
+                    </div>
+                    <span class="status-badge status-{{ entry.status }}">
+                        {{ entry.get_status_display }}
+                    </span>
+                </div>
+
+                <div class="entry-narration">
+                    {{ entry.narration }}
+                </div>
+
+                <div class="entry-footer">
+                    <div class="entry-amount">
+                        ₹ {{ entry.total_amount|floatformat:2 }}
+                    </div>
+
+                    <div class="entry-indicators">
+                        {% if entry.ai_warnings %}
+                        <div class="warning-indicator">
+                            <span>⚠</span>
+                            <span>{{ entry.ai_warnings|length }} warning{{ entry.ai_warnings|length|pluralize }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="confidence-indicator">
+                            <div class="confidence-bar">
+                                {% widthratio entry.ai_confidence 1 100 as confidence_pct %}
+                                <div class="confidence-fill {% if entry.ai_confidence > 0.8 %}confidence-high{% elif entry.ai_confidence > 0.5 %}confidence-medium{% else %}confidence-low{% endif %}"
+                                    style="width: {{ confidence_pct }}%"></div>
+                            </div>
+                            <span class="confidence-text">{% widthratio entry.ai_confidence 1 100 %}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">✓</div>
+            <div class="empty-state-text">All entries reviewed</div>
+            <div class="empty-state-subtext">No entries pending review at this time</div>
+        </div>
+        {% endif %}
+    </main>
+</body>
+
+</html>

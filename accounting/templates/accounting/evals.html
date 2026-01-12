@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Evals - Accounting AI</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/accounting.css' %}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        .evals-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        .filter-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .filter-input {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .export-section {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .export-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .export-btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .export-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .info-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .info-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .info-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+        }
+
+        .info-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-list li {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            padding: 0.4rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .info-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0.5rem;
+            color: var(--accent);
+        }
+
+        code {
+            background: var(--bg-input);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .status-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            background: var(--bg-input);
+            color: var(--text-secondary);
+        }
+
+        .status-count {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="brand">Accounting AI</div>
+            <nav>
+                <a href="{% url 'accounting:index' %}" class="nav-link">Home</a>
+                <a href="{% url 'accounting:review_entries' %}" class="nav-link">Review</a>
+                <a href="{% url 'accounting:journal_view' %}" class="nav-link">Journal</a>
+                <a href="{% url 'accounting:trial_balance_view' %}" class="nav-link">Trial Balance</a>
+                <a href="{% url 'accounting:profit_loss_view' %}" class="nav-link">P&L</a>
+                <a href="{% url 'accounting:evals_view' %}" class="nav-link"
+                    style="color: var(--text-primary);">Evals</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="evals-container">
+        <div class="page-header">
+            <h1 class="page-title">Agent Evaluations</h1>
+            <p class="page-subtitle">Export agent behavior data for analysis and skill improvement</p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Entries</div>
+                <div class="stat-value">{{ stats.total_entries }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Confidence</div>
+                <div class="stat-value">{% widthratio stats.avg_confidence 1 100 %}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Status Breakdown</div>
+                <div class="status-breakdown">
+                    {% for status, count in stats.by_status.items %}
+                    <span class="status-chip">
+                        <span>{{ status }}</span>
+                        <span class="status-count">{{ count }}</span>
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-section">
+            <div class="filter-title">Export Filters</div>
+
+            <form id="export-form" method="get" action="{% url 'accounting:export_evals_json' %}">
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label class="filter-label">Start Date</label>
+                        <input type="date" name="start_date" class="filter-input" id="start-date">
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">End Date</label>
+                        <input type="date" name="end_date" class="filter-input" id="end-date">
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select name="status" class="filter-input">
+                            <option value="">All Statuses</option>
+                            <option value="draft">Draft</option>
+                            <option value="flagged">Flagged</option>
+                            <option value="pending_review">Pending Review</option>
+                            <option value="approved">Approved</option>
+                            <option value="posted">Posted</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Transaction Type</label>
+                        <select name="transaction_type" class="filter-input">
+                            <option value="">All Types</option>
+                            <option value="invoice">Invoice</option>
+                            <option value="receipt">Receipt</option>
+                            <option value="receipt_with_tds">Receipt with TDS</option>
+                            <option value="salary">Salary</option>
+                            <option value="expense">Expense</option>
+                            <option value="drawings">Drawings</option>
+                            <option value="capital">Capital</option>
+                            <option value="gst_payment">GST Payment</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Min Confidence (0-1)</label>
+                        <input type="number" name="min_confidence" class="filter-input" min="0" max="1" step="0.1"
+                            placeholder="e.g., 0.8">
+                    </div>
+                </div>
+
+                <div class="export-section">
+                    <button type="submit" class="export-btn">
+                        <span>⬇</span>
+                        <span>Export JSON</span>
+                    </button>
+                    <span class="export-info">
+                        Download comprehensive dataset with prompts, completions, and performance metrics
+                    </span>
+                </div>
+            </form>
+        </div>
+
+        <!-- Information -->
+        <div class="info-section">
+            <div class="info-title">Export Data Structure</div>
+            <p class="info-text">
+                The exported JSON contains comprehensive agent behavior data following ML evaluation best practices:
+            </p>
+            <ul class="info-list">
+                <li><strong>Input Context:</strong> Original source text, transaction type, and reference</li>
+                <li><strong>Maker Output:</strong> AI reasoning, confidence scores, warnings, and generated journal
+                    entries</li>
+                <li><strong>Checker Output:</strong> Validation status, errors, warnings, and summary</li>
+                <li><strong>Ground Truth:</strong> Final human review decisions and notes</li>
+                <li><strong>Performance Metrics:</strong> Token usage and processing duration</li>
+                <li><strong>Complete Logs:</strong> Full prompts and completions from each agent stage</li>
+            </ul>
+            <p class="info-text" style="margin-top: 1rem;">
+                Use this data to analyze agent performance, identify failure patterns, create test datasets,
+                and improve skill definitions through fine-tuning or prompt engineering.
+            </p>
+        </div>
+    </main>
+</body>
+
+</html>
