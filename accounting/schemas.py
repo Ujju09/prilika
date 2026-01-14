@@ -135,13 +135,15 @@ class CheckerResult(BaseModel):
     
     status: Literal["approved", "flagged"]
     errors: list[str] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
+    warnings: dict[str, list[str]] = Field(default_factory=dict)
     summary: str
     
     @model_validator(mode='after')
     def status_matches_issues(self):
         """Status must be consistent with errors/warnings"""
-        has_issues = len(self.errors) > 0 or len(self.warnings) > 0
+        # Count warnings from all categories
+        warning_count = sum(len(w_list) for w_list in self.warnings.values())
+        has_issues = len(self.errors) > 0 or warning_count > 0
         
         if self.status == "approved" and has_issues:
             raise ValueError("Status is 'approved' but there are errors or warnings")

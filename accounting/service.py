@@ -39,8 +39,10 @@ class AccountingAgentService:
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = "claude-sonnet-4-20250514"
         
-        self.maker_skill = Path(settings.ACCOUNTING_SKILLS['MAKER']).read_text()
-        self.checker_skill = Path(settings.ACCOUNTING_SKILLS['CHECKER']).read_text()
+        today_str = date.today().isoformat()
+        
+        self.maker_skill = Path(settings.ACCOUNTING_SKILLS['MAKER']).read_text().replace("{{CURRENT_DATE}}", today_str)
+        self.checker_skill = Path(settings.ACCOUNTING_SKILLS['CHECKER']).read_text().replace("{{CURRENT_DATE}}", today_str)
     
     def _create_log(self, session_id: str, stage: str, level: str, message: str, **kwargs):
         """Helper to create AgentLog entry"""
