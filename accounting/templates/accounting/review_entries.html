@@ -26,6 +26,7 @@
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 0.5rem;
+            margin-top: 0.25rem;
         }
 
         .page-subtitle {
@@ -228,6 +229,11 @@
 
     <main class="review-container">
         <div class="page-header">
+            <nav class="breadcrumb">
+                <a href="{% url 'accounting:index' %}">Dashboard</a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-current">Review</span>
+            </nav>
             <h1 class="page-title">Review Queue</h1>
             <p class="page-subtitle">Journal entries pending review or approval ({{ entries.count }} total)</p>
         </div>

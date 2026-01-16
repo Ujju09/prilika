@@ -38,6 +38,34 @@
             border-radius: 8px;
         }
 
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .breadcrumb a {
+            text-decoration: none;
+            color: var(--primary);
+            transition: color 0.2s;
+        }
+
+        .breadcrumb a:hover {
+            color: #1d4ed8;
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-muted);
+        }
+
+        .breadcrumb-current {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
         header {
             display: flex;
             justify-content: space-between;
@@ -45,6 +73,10 @@
             margin-bottom: 30px;
             border-bottom: 2px solid var(--text-main);
             padding-bottom: 20px;
+        }
+
+        .header-left {
+            flex: 1;
         }
 
         .header-left h1 {
@@ -217,15 +249,19 @@
         {% else %}
         <header>
             <div class="header-left">
+                <nav class="breadcrumb">
+                    <a href="{% url 'accounting:index' %}">Agent</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="{% url 'accounting:trial_balance_view' %}">Trial Balance</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">{{ account.code }}</span>
+                </nav>
                 <h1>Account Ledger</h1>
                 <div class="account-info">
                     <strong>{{ account.code }}</strong> - {{ account.name }}<br>
                     <small>Account Type: {{ account.get_account_type_display }}
                         {% if account.account_subtype %}({{ account.account_subtype }}){% endif %}</small>
                 </div>
-            </div>
-            <div class="header-actions">
-                <a href="{% url 'accounting:trial_balance_view' %}" class="back-link">← Back to Trial Balance</a>
             </div>
         </header>
 

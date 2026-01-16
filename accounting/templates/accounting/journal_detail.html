@@ -4,9 +4,15 @@
 {% block content %}
 <div class="container" style="max-width: 1200px;">
     <header>
-        <h1>Journal Entry Details</h1>
-        <div>
-            <a href="{% url 'accounting:journal_view' %}" class="back-link">← Back to Register</a>
+        <div class="header-left">
+            <nav class="breadcrumb">
+                <a href="{% url 'accounting:index' %}">Agent</a>
+                <span class="breadcrumb-separator">/</span>
+                <a href="{% url 'accounting:journal_view' %}">Journal</a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-current">{{ entry.entry_number }}</span>
+            </nav>
+            <h1>Journal Entry Details</h1>
         </div>
     </header>
 

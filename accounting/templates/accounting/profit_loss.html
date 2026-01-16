@@ -37,13 +37,45 @@
             border-radius: 8px;
         }
 
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .breadcrumb a {
+            text-decoration: none;
+            color: var(--primary);
+            transition: color 0.2s;
+        }
+
+        .breadcrumb a:hover {
+            color: #1d4ed8;
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-muted);
+        }
+
+        .breadcrumb-current {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
         header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 30px;
             border-bottom: 2px solid var(--text-main);
             padding-bottom: 20px;
+        }
+
+        .header-left {
+            flex: 1;
         }
 
         h1 {
@@ -220,11 +252,17 @@
 <body>
     <div class="container">
         <header>
-            <h1>Profit & Loss Statement</h1>
+            <div class="header-left">
+                <nav class="breadcrumb">
+                    <a href="{% url 'accounting:index' %}">Agent</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">P&L</span>
+                </nav>
+                <h1>Profit & Loss Statement</h1>
+            </div>
             <div class="header-actions">
                 <a href="{% url 'accounting:export_pnl_pdf' %}?{% if from_date %}from_date={{ from_date|date:'Y-m-d' }}&{% endif %}to_date={{ to_date|date:'Y-m-d' }}"
                     class="back-link">⬇ Export PDF</a>
-                <a href="{% url 'accounting:index' %}" class="back-link">← Back to Dashboard</a>
             </div>
         </header>
 

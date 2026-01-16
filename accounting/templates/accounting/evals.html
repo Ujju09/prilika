@@ -26,6 +26,7 @@
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 0.5rem;
+            margin-top: 0.25rem;
         }
 
         .page-subtitle {
@@ -234,6 +235,11 @@
 
     <main class="evals-container">
         <div class="page-header">
+            <nav class="breadcrumb">
+                <a href="{% url 'accounting:index' %}">Agent</a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-current">Evals</span>
+            </nav>
             <h1 class="page-title">Agent Evaluations</h1>
             <p class="page-subtitle">Export agent behavior data for analysis and skill improvement</p>
         </div>
