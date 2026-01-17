@@ -5,171 +5,432 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Prilika</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'css/accounting.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        .login-container {
+        :root {
+            --primary: #2563eb;
+            --border: #e2e8f0;
+            --bg-header: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f1f5f9;
+            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
-        .login-card {
-            background: white;
-            padding: 3rem 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        .container {
+            max-width: 500px;
             width: 100%;
-            max-width: 400px;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
         }
 
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
+        header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--text-main);
+            padding-bottom: 12px;
         }
 
-        .login-header h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #1a202c;
-            margin: 0 0 0.5rem 0;
+        h1 {
+            margin: 0 0 4px 0;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .login-header p {
-            color: #718096;
+        h1 span {
+            display: inline-block;
+        }
+
+        h1 span.locked {
+            opacity: 1;
+        }
+
+        .subtitle {
             margin: 0;
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .demo-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--bg-header);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .demo-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .transformation-box {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            transition: all 0.5s ease;
+        }
+
+        .transform-icon {
+            text-align: center;
+            color: var(--primary);
+            font-size: 20px;
+            margin: 8px 0;
+            font-weight: 600;
+        }
+
+        .unstructured {
+            color: #dc2626;
+            font-style: italic;
+        }
+
+        .structured {
+            color: #16a34a;
+            line-height: 1.6;
+        }
+
+        .ai-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.85;
+                transform: scale(0.98);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #dc2626;
+            color: #991b1b;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            border: 1px solid #16a34a;
+            color: #166534;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-radius: 4px;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 24px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #2d3748;
-            font-weight: 500;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 0.75rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
+            padding: 12px;
+            border: 1px solid var(--border);
+            background: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            color: var(--text-main);
             transition: all 0.2s;
+            border-radius: 4px;
             box-sizing: border-box;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        .login-btn {
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .submit-btn {
             width: 100%;
-            padding: 0.875rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 14px;
+            background: var(--text-main);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 4px;
         }
 
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        .submit-btn:hover {
+            background: #0f172a;
         }
 
-        .login-btn:active {
-            transform: translateY(0);
+        .submit-btn:active {
+            transform: scale(0.98);
         }
 
-        .error-message {
-            background: #fed7d7;
-            color: #c53030;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            font-size: 0.875rem;
-            border-left: 4px solid #c53030;
-        }
-
-        .success-message {
-            background: #c6f6d5;
-            color: #22543d;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            font-size: 0.875rem;
-            border-left: 4px solid #22543d;
-        }
-
-        .brand-footer {
+        .footer {
             text-align: center;
-            margin-top: 2rem;
-            color: #a0aec0;
-            font-size: 0.875rem;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <h1>Prilika</h1>
-                <p>AI-Powered Accounting Platform</p>
+    <div class="container">
+        <header>
+            <h1 id="logo">PRILIKA</h1>
+            <p class="subtitle">AI-Powered Accounting System<span class="ai-badge">AI AGENTS</span></p>
+        </header>
+
+        <div class="demo-container">
+            <div class="demo-label">AI Transformation Demo</div>
+            <div id="unstructured-text" class="transformation-box unstructured"></div>
+            <div class="transform-icon">↓</div>
+            <div id="structured-text" class="transformation-box structured"></div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="{% if message.tags == 'error' %}error-message{% else %}success-message{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    autofocus
+                    placeholder="Enter your username"
+                >
             </div>
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="{% if message.tags == 'error' %}error-message{% else %}success-message{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-
-            <form method="post" action="{% url 'login' %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ next }}">
-
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input
-                        type="text"
-                        id="username"
-                        name="username"
-                        required
-                        autofocus
-                        placeholder="Enter your username"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        required
-                        placeholder="Enter your password"
-                    >
-                </div>
-
-                <button type="submit" class="login-btn">
-                    Sign In
-                </button>
-            </form>
-
-            <div class="brand-footer">
-                &copy; 2026 Prilika. All rights reserved.
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    placeholder="Enter your password"
+                >
             </div>
+
+            <button type="submit" class="submit-btn">
+                Sign In
+            </button>
+        </form>
+
+        <div class="footer">
+            &copy; {% now "Y" %} Prilika. All rights reserved.
         </div>
     </div>
+
+    <script>
+        // Accounting symbols and numbers to morph from
+        const symbols = ['₹', '₨', '$', '€', '£', '¥', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                        '+', '-', '×', '÷', '=', '%', '#', '@', '&', '*', '.', ','];
+
+        const finalText = 'PRILIKA';
+        const logoElement = document.getElementById('logo');
+
+        // Demo data showing AI transformation
+        const demoExamples = [
+            {
+                unstructured: "Paid office rent for December ₹25,000 by bank transfer",
+                structured: "Dr. Rent Expense      ₹25,000\n   Cr. Bank Account            ₹25,000"
+            },
+            {
+                unstructured: "Received ₹50,000 from customer Sharma & Sons for invoice #1234",
+                structured: "Dr. Bank Account     ₹50,000\n   Cr. Accounts Receivable     ₹50,000"
+            },
+            {
+                unstructured: "Bought office supplies worth ₹3,500 cash",
+                structured: "Dr. Office Supplies   ₹3,500\n   Cr. Cash                    ₹3,500"
+            },
+            {
+                unstructured: "Paid electricity bill ₹4,200 through UPI",
+                structured: "Dr. Utilities Expense ₹4,200\n   Cr. Bank Account            ₹4,200"
+            }
+        ];
+
+        let currentDemoIndex = 0;
+
+        function animateTransformation() {
+            const unstructuredEl = document.getElementById('unstructured-text');
+            const structuredEl = document.getElementById('structured-text');
+
+            const example = demoExamples[currentDemoIndex];
+
+            // Show unstructured text
+            unstructuredEl.textContent = example.unstructured;
+            structuredEl.textContent = '';
+
+            // After 2.5 seconds, transform to structured
+            setTimeout(() => {
+                structuredEl.classList.add('fade-in');
+                structuredEl.textContent = example.structured;
+
+                // After showing structured for 2.5 seconds, move to next example
+                setTimeout(() => {
+                    structuredEl.classList.remove('fade-in');
+                    currentDemoIndex = (currentDemoIndex + 1) % demoExamples.length;
+                    animateTransformation();
+                }, 2500);
+            }, 2500);
+        }
+
+        function animateLogo() {
+            const chars = finalText.split('');
+            const morphIterations = 15; // Number of random changes per character
+            let currentIndex = 0;
+
+            // Start with all random symbols
+            logoElement.innerHTML = chars
+                .map(() => `<span>${symbols[Math.floor(Math.random() * symbols.length)]}</span>`)
+                .join('');
+
+            function morphNextChar() {
+                if (currentIndex >= chars.length) {
+                    return; // Animation complete
+                }
+
+                let morphCount = 0;
+                const morphInterval = setInterval(() => {
+                    // Update display with current state
+                    logoElement.innerHTML = chars
+                        .map((char, index) => {
+                            if (index < currentIndex) {
+                                // Already resolved - keep static with locked class
+                                return `<span class="locked">${char}</span>`;
+                            } else if (index === currentIndex) {
+                                // Currently morphing
+                                if (morphCount >= morphIterations) {
+                                    return `<span class="locked">${char}</span>`;
+                                }
+                                return `<span>${symbols[Math.floor(Math.random() * symbols.length)]}</span>`;
+                            } else {
+                                // Not yet started
+                                return `<span>${symbols[Math.floor(Math.random() * symbols.length)]}</span>`;
+                            }
+                        })
+                        .join('');
+
+                    morphCount++;
+
+                    if (morphCount > morphIterations) {
+                        clearInterval(morphInterval);
+                        currentIndex++;
+                        // Small delay before starting next character
+                        setTimeout(morphNextChar, 100);
+                    }
+                }, 50);
+            }
+
+            // Start morphing the first character after a brief delay
+            setTimeout(morphNextChar, 200);
+        }
+
+        // Start animations when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            animateLogo();
+            // Start demo after logo animation completes
+            setTimeout(() => {
+                animateTransformation();
+            }, 2000);
+        });
+    </script>
 </body>
 </html>

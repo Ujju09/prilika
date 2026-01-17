@@ -14,7 +14,6 @@ from .service import process_and_save
 from .trial_balance_service import get_trial_balance
 from .pnl_service import get_profit_loss
 from .ledger_service import get_account_ledger
-from . import email_service
 
 logger = logging.getLogger('accounting')
 
@@ -235,16 +234,6 @@ def process_transaction(request):
         api_key = request.headers.get('X-Anthropic-ApiKey')
         result = process_and_save(description, transaction_date, api_key)
 
-        # Send email notification if entry was flagged
-        if not result["success"] and result.get("db_entry"):
-            try:
-                email_service.send_entry_flagged_notification(
-                    result["db_entry"],
-                    result["errors"]
-                )
-            except Exception as email_error:
-                logger.error(f"Failed to send email notification: {email_error}")
-
         # Serialize result for frontend
         response_data = {
             "success": result["success"],
@@ -265,14 +254,6 @@ def process_transaction(request):
 
     except Exception as e:
         logger.error(f"Transaction processing error: {e}", exc_info=True)
-        # Send error notification
-        try:
-            email_service.send_processing_error_notification(
-                description if 'description' in locals() else 'Unknown transaction',
-                str(e)
-            )
-        except Exception:
-            pass
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
@@ -366,14 +347,8 @@ def approve_entry(request, entry_id):
     """
     entry = get_object_or_404(JournalEntry, id=entry_id)
     try:
-        reviewer = "Admin"  # In real app, get from request.user
+        reviewer = request.user.username
         entry.approve(reviewer=reviewer)
-
-        # Send email notification
-        try:
-            email_service.send_entry_approval_notification(entry, reviewer)
-        except Exception as email_error:
-            logger.error(f"Failed to send approval email: {email_error}")
 
         return JsonResponse({"success": True})
     except Exception as e:
@@ -394,12 +369,6 @@ def reject_entry(request, entry_id):
         reason = data.get('reason', 'Rejected by user')
         reviewer = "Admin"  # In real app, get from request.user
         entry.reject(reviewer=reviewer, notes=reason)
-
-        # Send email notification
-        try:
-            email_service.send_entry_rejection_notification(entry, reviewer, reason)
-        except Exception as email_error:
-            logger.error(f"Failed to send rejection email: {email_error}")
 
         return JsonResponse({"success": True})
     except Exception as e:
