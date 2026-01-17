@@ -7,6 +7,8 @@ import json
 import anthropic
 import uuid
 import time
+import html
+import logging
 from pathlib import Path
 from datetime import date
 from decimal import Decimal
@@ -24,6 +26,33 @@ from .schemas import (
     GSTBreakdown,
 )
 from .models import AgentLog
+
+logger = logging.getLogger('accounting')
+
+
+def sanitize_user_input(text: str) -> str:
+    """
+    Sanitize user input to prevent prompt injection attacks.
+    Escapes XML/HTML special characters that could break prompt structure.
+
+    Args:
+        text: User-provided input string
+
+    Returns:
+        Sanitized string with HTML/XML entities escaped
+    """
+    if not text:
+        return text
+
+    # Escape HTML/XML special characters
+    sanitized = html.escape(text, quote=True)
+
+    # Additional check: detect and log potential injection attempts
+    suspicious_patterns = ['</input>', '</skill>', '<eval>', '<system>']
+    if any(pattern.lower() in text.lower() for pattern in suspicious_patterns):
+        logger.warning(f"Potential prompt injection attempt detected: {text[:100]}")
+
+    return sanitized
 
 
 class AccountingAgentService:
@@ -73,7 +102,7 @@ class AccountingAgentService:
 </skill>
 
 <input>
-Description: {description}
+Description: {sanitize_user_input(description)}
 Date: {transaction_date.isoformat()}
 </input>
 
@@ -125,7 +154,7 @@ Generate the journal entry as specified in the skill. Output ONLY the JSON objec
 </skill>
 
 <original_input>
-{original_input}
+{sanitize_user_input(original_input)}
 </original_input>
 
 <entry_to_validate>

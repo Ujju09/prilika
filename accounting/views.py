@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.utils.http import url_has_allowed_host_and_scheme
 import json
 import logging
 from datetime import date as dt_date
@@ -31,6 +32,15 @@ def login_view(request):
         if user is not None:
             auth_login(request, user)
             next_url = request.GET.get('next', '/accounting/')
+
+            # Validate the redirect URL to prevent open redirect attacks
+            if not url_has_allowed_host_and_scheme(
+                url=next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure()
+            ):
+                next_url = '/accounting/'
+
             return redirect(next_url)
         else:
             messages.error(request, 'Invalid username or password')
