@@ -23,6 +23,15 @@ SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 # ALLOWED_HOSTS must be set in environment variables (comma-separated)
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
 
+# Automatically add Railway domains if RAILWAY_PUBLIC_DOMAIN is set
+if os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
+    railway_domain = os.environ['RAILWAY_PUBLIC_DOMAIN'].replace('https://', '').replace('http://', '')
+    if railway_domain and railway_domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(railway_domain)
+
+# Remove empty strings from ALLOWED_HOSTS
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
+
 
 # HTTPS/Security Headers
 SECURE_SSL_REDIRECT = True
