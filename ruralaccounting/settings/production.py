@@ -4,9 +4,15 @@ Security-hardened configuration for deployment on Railway/Render.
 """
 import os
 import dj_database_url
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
 from .base import *
+
+# Optional Sentry SDK imports
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
 
 # Security settings
 DEBUG = False
@@ -15,7 +21,12 @@ DEBUG = False
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 
 # ALLOWED_HOSTS must be set in environment variables (comma-separated)
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+# ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    'https://prilika-production.up.railway.app',
+    'https://*.up.railway.app',  # This covers any Railway subdomain
+]
 
 # HTTPS/Security Headers
 SECURE_SSL_REDIRECT = True
@@ -56,7 +67,7 @@ ADMINS = [
 ]
 
 # Sentry error tracking
-if os.environ.get('SENTRY_DSN'):
+if SENTRY_AVAILABLE and os.environ.get('SENTRY_DSN'):
     sentry_sdk.init(
         dsn=os.environ['SENTRY_DSN'],
         integrations=[DjangoIntegration()],
