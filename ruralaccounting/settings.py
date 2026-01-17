@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-x9vpwfvz1nd+-)m$uzy57a-(477)mn@=r!cwi%)2)r_wrd24d8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*','healthcheck.railway.app']
 
 # Anthropic API key
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
