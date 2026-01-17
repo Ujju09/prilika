@@ -1,0 +1,17 @@
+env/
+.env
+*.pyc
+__pycache__/
+db.sqlite3
+.git/
+.DS_Store
+*.log
+.vscode/
+.idea/
+staticfiles/
+.gitignore
+*.md
+.github/
+tests/
+*.sqlite3
+data_backup.json

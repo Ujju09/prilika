@@ -1,9 +1,12 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, FileResponse
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib import messages
 from django.db.models import Count, Q
 import json
+import logging
 from datetime import date as dt_date
 
 from .models import JournalEntry, AgentLog
@@ -11,53 +14,92 @@ from .service import process_and_save
 from .trial_balance_service import get_trial_balance
 from .pnl_service import get_profit_loss
 from .ledger_service import get_account_ledger
+from . import email_service
+
+logger = logging.getLogger('accounting')
 
 
+def login_view(request):
+    """Handle user login"""
+    if request.user.is_authenticated:
+        return redirect('/accounting/')
 
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            auth_login(request, user)
+            next_url = request.GET.get('next', '/accounting/')
+            return redirect(next_url)
+        else:
+            messages.error(request, 'Invalid username or password')
+
+    return render(request, 'accounting/login.html')
+
+
+def logout_view(request):
+    """Handle user logout"""
+    auth_logout(request)
+    messages.success(request, 'You have been logged out successfully')
+    return redirect('/login/')
+
+
+@login_required
 def index(request):
-    """Render the main UI"""
+    """Render the main UI - requires authentication"""
     return render(request, 'accounting/index.html')
 
+
+@login_required
 def journal_view(request):
-    """Render the Journal Register in ICAI format"""
+    """Render the Journal Register in ICAI format - requires authentication"""
     entries = JournalEntry.objects.filter(
         status__in=['posted', 'approved', 'pending_review']
     ).prefetch_related('lines').order_by('-transaction_date', '-entry_number')
-    
+
     return render(request, 'accounting/journal.html', {'entries': entries})
 
+
+@login_required
 def review_entries(request):
-    """Render the Review page for non-posted entries"""
+    """Render the Review page for non-posted entries - requires authentication"""
     # Exclude posted entries - show everything else
     entries = JournalEntry.objects.exclude(
         status='posted'
     ).prefetch_related('lines').order_by('-transaction_date', '-created_at')
-    
+
     return render(request, 'accounting/review_entries.html', {'entries': entries})
 
+
+@login_required
 def journal_detail(request, entry_id):
-    """Render the detailed view of a journal entry"""
+    """Render the detailed view of a journal entry - requires authentication"""
     entry = get_object_or_404(JournalEntry, id=entry_id)
     return render(request, 'accounting/journal_detail.html', {'entry': entry})
 
+@login_required
 def export_journal_pdf(request):
-    """Generate and download Journal PDF"""
+    """Generate and download Journal PDF - requires authentication"""
     from .pdf_service import generate_journal_pdf
-    
+
     entries = JournalEntry.objects.filter(
         status__in=['posted', 'approved', 'pending_review']
     ).prefetch_related('lines').order_by('-transaction_date', '-entry_number')
-    
+
     buffer = generate_journal_pdf(entries)
-    
+
     return FileResponse(
         buffer,
         as_attachment=True,
         filename=f"journal_register_{dt_date.today()}.pdf"
     )
 
+
+@login_required
 def trial_balance_view(request):
-    """Render Trial Balance in ICAI format"""
+    """Render Trial Balance in ICAI format - requires authentication"""
     # Get date parameter (default to today)
     as_of_date_str = request.GET.get('as_of_date')
     if as_of_date_str:
@@ -67,14 +109,16 @@ def trial_balance_view(request):
             as_of_date = dt_date.today()
     else:
         as_of_date = dt_date.today()
-    
+
     # Get trial balance data
     tb_data = get_trial_balance(as_of_date)
-    
+
     return render(request, 'accounting/trial_balance.html', tb_data)
 
+
+@login_required
 def export_trial_balance_pdf(request):
-    """Generate and download Trial Balance PDF"""
+    """Generate and download Trial Balance PDF - requires authentication"""
     from .trial_balance_pdf import generate_trial_balance_pdf
     
     # Get date parameter (default to today)
@@ -98,33 +142,36 @@ def export_trial_balance_pdf(request):
         filename=f"trial_balance_{as_of_date}.pdf"
     )
 
+@login_required
 def profit_loss_view(request):
-    """Render Profit & Loss Statement in ICAI format"""
+    """Render Profit & Loss Statement in ICAI format - requires authentication"""
     # Get date parameters
     from_date_str = request.GET.get('from_date')
     to_date_str = request.GET.get('to_date')
-    
+
     from_date = None
     if from_date_str:
         try:
             from_date = dt_date.fromisoformat(from_date_str)
         except ValueError:
             pass
-    
+
     to_date = dt_date.today()
     if to_date_str:
         try:
             to_date = dt_date.fromisoformat(to_date_str)
         except ValueError:
             to_date = dt_date.today()
-    
+
     # Get P&L data
     pnl_data = get_profit_loss(from_date, to_date)
-    
+
     return render(request, 'accounting/profit_loss.html', pnl_data)
 
+
+@login_required
 def export_pnl_pdf(request):
-    """Generate and download P&L PDF"""
+    """Generate and download P&L PDF - requires authentication"""
     from .pnl_pdf import generate_pnl_pdf
     
     # Get date parameters
@@ -159,21 +206,24 @@ def export_pnl_pdf(request):
     )
 
 
-@csrf_exempt
+@login_required
 @require_http_methods(["POST"])
 def process_transaction(request):
     """
     API endpoint to process a natural language transaction.
     Expects JSON: { "description": "...", "date": "YYYY-MM-DD" }
+
+    Note: CSRF protection enabled. Frontend must include CSRF token in headers.
+    Requires authentication.
     """
     try:
         data = json.loads(request.body)
         description = data.get('description')
         date_str = data.get('date')
-        
+
         if not description:
             return JsonResponse({'error': 'Description is required'}, status=400)
-            
+
         if date_str:
             try:
                 transaction_date = dt_date.fromisoformat(date_str)
@@ -181,10 +231,20 @@ def process_transaction(request):
                 return JsonResponse({'error': 'Invalid date format'}, status=400)
         else:
             transaction_date = None
-            
+
         api_key = request.headers.get('X-Anthropic-ApiKey')
         result = process_and_save(description, transaction_date, api_key)
-        
+
+        # Send email notification if entry was flagged
+        if not result["success"] and result.get("db_entry"):
+            try:
+                email_service.send_entry_flagged_notification(
+                    result["db_entry"],
+                    result["errors"]
+                )
+            except Exception as email_error:
+                logger.error(f"Failed to send email notification: {email_error}")
+
         # Serialize result for frontend
         response_data = {
             "success": result["success"],
@@ -194,22 +254,32 @@ def process_transaction(request):
             "checker_output": result["raw_checker_output"],
             "checker_result": result["checker_result"].model_dump() if result.get("checker_result") else None
         }
-        
+
         if result.get("entry"):
             response_data["entry"] = result["entry"].model_dump(mode='json')
-            
+
         if result.get("db_entry"):
             response_data["db_entry_id"] = result["db_entry"].id
-            
+
         return JsonResponse(response_data)
-        
+
     except Exception as e:
+        logger.error(f"Transaction processing error: {e}", exc_info=True)
+        # Send error notification
+        try:
+            email_service.send_processing_error_notification(
+                description if 'description' in locals() else 'Unknown transaction',
+                str(e)
+            )
+        except Exception:
+            pass
         return JsonResponse({'error': str(e)}, status=500)
 
+@login_required
 @require_http_methods(["GET"])
 def get_entries(request):
     """
-    API to list journal entries for the review queue.
+    API to list journal entries for the review queue - requires authentication.
     """
     entries = JournalEntry.objects.all().order_by('-created_at')
     
@@ -229,10 +299,11 @@ def get_entries(request):
         
     return JsonResponse({"entries": data})
 
+@login_required
 @require_http_methods(["GET"])
 def get_entry_logs(request, entry_id):
     """
-    API to get logs for a specific entry.
+    API to get logs for a specific entry - requires authentication.
     """
     entry = get_object_or_404(JournalEntry, id=entry_id)
     logs = entry.logs.all().order_by('timestamp')
@@ -255,10 +326,11 @@ def get_entry_logs(request, entry_id):
         
     return JsonResponse({"logs": data})
 
+@login_required
 @require_http_methods(["GET"])
 def get_session_logs(request):
     """
-    API to get logs by session_id (for real-time view before keeping).
+    API to get logs by session_id (for real-time view before keeping) - requires authentication.
     """
     session_id = request.GET.get('session_id')
     if not session_id:
@@ -284,33 +356,60 @@ def get_session_logs(request):
         
     return JsonResponse({"logs": data})
 
-@csrf_exempt
+@login_required
 @require_http_methods(["POST"])
 def approve_entry(request, entry_id):
-    """Approve an entry"""
+    """
+    Approve an entry - requires authentication.
+
+    Note: CSRF protection enabled. Frontend must include CSRF token in headers.
+    """
     entry = get_object_or_404(JournalEntry, id=entry_id)
     try:
-        entry.approve(reviewer="Admin") # In real app, get user from request
+        reviewer = "Admin"  # In real app, get from request.user
+        entry.approve(reviewer=reviewer)
+
+        # Send email notification
+        try:
+            email_service.send_entry_approval_notification(entry, reviewer)
+        except Exception as email_error:
+            logger.error(f"Failed to send approval email: {email_error}")
+
         return JsonResponse({"success": True})
     except Exception as e:
+        logger.error(f"Entry approval error: {e}", exc_info=True)
         return JsonResponse({"success": False, "error": str(e)}, status=400)
 
-@csrf_exempt
+@login_required
 @require_http_methods(["POST"])
 def reject_entry(request, entry_id):
-    """Reject an entry"""
+    """
+    Reject an entry - requires authentication.
+
+    Note: CSRF protection enabled. Frontend must include CSRF token in headers.
+    """
     entry = get_object_or_404(JournalEntry, id=entry_id)
     try:
         data = json.loads(request.body)
         reason = data.get('reason', 'Rejected by user')
-        entry.reject(reviewer="Admin", notes=reason)
+        reviewer = "Admin"  # In real app, get from request.user
+        entry.reject(reviewer=reviewer, notes=reason)
+
+        # Send email notification
+        try:
+            email_service.send_entry_rejection_notification(entry, reviewer, reason)
+        except Exception as email_error:
+            logger.error(f"Failed to send rejection email: {email_error}")
+
         return JsonResponse({"success": True})
     except Exception as e:
+        logger.error(f"Entry rejection error: {e}", exc_info=True)
         return JsonResponse({"success": False, "error": str(e)}, status=400)
 
 
+@login_required
 def account_ledger(request, account_code):
-    """Render account ledger showing all transactions for an account"""
+    """Render account ledger showing all transactions for an account - requires authentication"""
     # Get date parameters (optional)
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
@@ -342,8 +441,9 @@ def account_ledger(request, account_code):
     return render(request, 'accounting/account_ledger.html', ledger_data)
 
 
+@login_required
 def evals_view(request):
-    """Render the evals page for exporting agent behavior data"""
+    """Render the evals page for exporting agent behavior data - requires authentication"""
     from django.db.models import Sum, Avg
     
     # Get statistics for display
@@ -364,9 +464,10 @@ def evals_view(request):
     return render(request, 'accounting/evals.html', {'stats': stats})
 
 
+@login_required
 @require_http_methods(["GET"])
 def export_evals_json(request):
-    """Export agent behavior data as JSON for evaluation and training"""
+    """Export agent behavior data as JSON for evaluation and training - requires authentication"""
     from django.utils import timezone
     from decimal import Decimal
     

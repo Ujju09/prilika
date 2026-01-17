@@ -1,6 +1,11 @@
 from django.contrib import admin
 from .models import JournalEntry, JournalLine, Account, AgentLog
 
+# Customize admin site branding
+admin.site.site_header = "Prilika Administration"
+admin.site.site_title = "Prilika Admin"
+admin.site.index_title = "Welcome to Prilika"
+
 class JournalLineInline(admin.TabularInline):
     model = JournalLine
     extra = 1

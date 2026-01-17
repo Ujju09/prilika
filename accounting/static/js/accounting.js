@@ -1,7 +1,28 @@
+// CSRF Token Helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Get CSRF token for POST requests
+function getCSRFToken() {
+    return getCookie('csrftoken');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Set default date to today
     document.getElementById('transaction-date').valueAsDate = new Date();
-    
+
     // Event Listeners
     document.getElementById('process-btn').addEventListener('click', processTransaction);
 });
@@ -28,11 +49,14 @@ async function processTransaction() {
     addFeedItem('system', { message: 'Transaction processing started...' });
     
     try {
-        const headers = { 'Content-Type': 'application/json' };
-        
-        // Simulate "thinking" time for better UX if it's too fast, 
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()  // Add CSRF token for security
+        };
+
+        // Simulate "thinking" time for better UX if it's too fast,
         // or just let it fly.
-        
+
         const response = await fetch('/accounting/api/process/', {
             method: 'POST',
             headers: headers,
@@ -175,12 +199,17 @@ function addFeedItem(type, data) {
 async function approveEntry(id) {
     if(!id) return;
     const actionsDiv = document.getElementById(`actions-${id}`);
-    
+
     // Optimistic UI
     actionsDiv.innerHTML = '<span class="text-secondary">Posting...</span>';
-    
+
     try {
-        await fetch(`/accounting/api/entries/${id}/approve/`, { method: 'POST' });
+        await fetch(`/accounting/api/entries/${id}/approve/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken()  // Add CSRF token
+            }
+        });
         actionsDiv.innerHTML = '<span style="color: var(--success)">✓ Approved & Posted</span>';
     } catch(e) {
         alert("Error approving: " + e.message);
@@ -192,14 +221,18 @@ async function rejectEntry(id) {
     if(!id) return;
     const reason = prompt("Reason for rejection:");
     if(!reason) return;
-    
+
     const actionsDiv = document.getElementById(`actions-${id}`);
     actionsDiv.innerHTML = '<span class="text-secondary">Rejecting...</span>';
-    
+
     try {
-        await fetch(`/accounting/api/entries/${id}/reject/`, { 
+        await fetch(`/accounting/api/entries/${id}/reject/`, {
             method: 'POST',
-            body: JSON.stringify({ reason }) 
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()  // Add CSRF token
+            },
+            body: JSON.stringify({ reason })
         });
         actionsDiv.innerHTML = '<span style="color: var(--danger)">✗ Rejected</span>';
     } catch(e) {

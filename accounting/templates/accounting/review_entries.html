@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Review Entries - Accounting AI</title>
+    <title>Review Entries - Prilika</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/accounting.css' %}">
     <link
@@ -215,7 +215,7 @@
 <body>
     <header>
         <div class="header-content">
-            <div class="brand">Accounting AI</div>
+            <div class="brand">Prilika</div>
             <nav>
                 <a href="{% url 'accounting:index' %}" class="nav-link">Home</a>
                 <a href="{% url 'accounting:review_entries' %}" class="nav-link"
@@ -223,6 +223,7 @@
                 <a href="{% url 'accounting:journal_view' %}" class="nav-link">Journal</a>
                 <a href="{% url 'accounting:trial_balance_view' %}" class="nav-link">Trial Balance</a>
                 <a href="{% url 'accounting:profit_loss_view' %}" class="nav-link">P&L</a>
+                <a href="{% url 'logout' %}" class="nav-link" style="margin-left: auto;">Logout</a>
             </nav>
         </div>
     </header>
