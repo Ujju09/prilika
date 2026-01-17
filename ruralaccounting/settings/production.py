@@ -21,8 +21,7 @@ DEBUG = False
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 
 # ALLOWED_HOSTS must be set in environment variables (comma-separated)
-# ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
 CSRF_TRUSTED_ORIGINS = [
     'https://prilika-production.up.railway.app',
     'https://*.up.railway.app',  # This covers any Railway subdomain
