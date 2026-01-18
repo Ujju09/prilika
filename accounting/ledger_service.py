@@ -8,7 +8,7 @@ with running balance calculations.
 from decimal import Decimal
 from datetime import date
 from typing import Optional
-from django.db.models import Q
+from django.db.models import Q, Sum
 
 from .models import Account, JournalLine, JournalEntry
 
@@ -57,15 +57,19 @@ def get_account_ledger(
     # Calculate opening balance if start_date is provided
     opening_balance = Decimal('0')
     if start_date:
-        opening_lines = JournalLine.objects.filter(
+        # OPTIMIZED: Use database aggregation instead of Python loop
+        opening_totals = JournalLine.objects.filter(
             account_code=account_code,
             journal_entry__status='posted',
             journal_entry__transaction_date__lt=start_date
-        ).select_related('journal_entry')
-        
-        opening_debit = sum(line.debit for line in opening_lines)
-        opening_credit = sum(line.credit for line in opening_lines)
-        
+        ).aggregate(
+            total_debit=Sum('debit'),
+            total_credit=Sum('credit')
+        )
+
+        opening_debit = opening_totals['total_debit'] or Decimal('0')
+        opening_credit = opening_totals['total_credit'] or Decimal('0')
+
         # Calculate based on account type
         if account.account_type in ('asset', 'expense'):
             opening_balance = opening_debit - opening_credit

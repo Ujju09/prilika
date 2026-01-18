@@ -212,12 +212,13 @@
             </thead>
             <tbody>
                 {% for entry in entries %}
-                {% for line in entry.lines.all %}
+                {% with lines=entry.lines.all %}
+                {% for line in lines %}
                 {% if line.debit > 0 %}
                 <!-- Debit Line -->
                 <tr data-entry-id="{{ entry.id }}">
                     {% if forloop.first %}
-                    <td rowspan="{{ entry.lines.count|add:1 }}">{{ entry.transaction_date|date:"Y-m-d" }}</td>
+                    <td rowspan="{{ lines|length|add:1 }}">{{ entry.transaction_date|date:"Y-m-d" }}</td>
                     {% endif %}
                     <td class="particulars-debit">
                         {{ line.account_name }} <span class="dr-suffix">Dr.</span>
@@ -229,7 +230,7 @@
                 {% endif %}
                 {% endfor %}
 
-                {% for line in entry.lines.all %}
+                {% for line in lines %}
                 {% if line.credit > 0 %}
                 <!-- Credit Line -->
                 <tr data-entry-id="{{ entry.id }}">
@@ -252,7 +253,7 @@
                     <td></td>
                     <td></td>
                 </tr>
-
+                {% endwith %}
                 {% empty %}
                 <tr>
                     <td colspan="5" style="text-align: center; padding: 40px;">No posted entries found.</td>

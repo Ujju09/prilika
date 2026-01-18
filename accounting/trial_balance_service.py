@@ -13,10 +13,10 @@ from .models import Account, JournalLine
 def get_trial_balance(as_of_date: Optional[date] = None) -> Dict:
     """
     Calculate Trial Balance as of a specific date.
-    
+
     Args:
         as_of_date: Date for which to calculate balances. Defaults to current date.
-        
+
     Returns:
         Dictionary containing:
         - accounts_by_type: Dict mapping account type to list of account data
@@ -27,10 +27,10 @@ def get_trial_balance(as_of_date: Optional[date] = None) -> Dict:
     """
     if as_of_date is None:
         as_of_date = date.today()
-    
+
     # Get all active accounts ordered by code
     accounts = Account.objects.filter(is_active=True).order_by('code')
-    
+
     # Account type ordering for display (standard accounting order)
     account_type_order = ['asset', 'liability', 'equity', 'income', 'expense']
     account_type_labels = {
@@ -40,38 +40,76 @@ def get_trial_balance(as_of_date: Optional[date] = None) -> Dict:
         'income': 'Income',
         'expense': 'Expenses'
     }
-    
+
+    # OPTIMIZED: Get all balances in a single query using GROUP BY
+    balances_query = JournalLine.objects.filter(
+        journal_entry__status='posted',
+        journal_entry__transaction_date__lte=as_of_date
+    ).values('account_code').annotate(
+        total_debit=Sum('debit'),
+        total_credit=Sum('credit')
+    )
+
+    # Create a lookup dict for fast access
+    balances_dict = {
+        item['account_code']: {
+            'debit': item['total_debit'] or Decimal('0'),
+            'credit': item['total_credit'] or Decimal('0')
+        }
+        for item in balances_query
+    }
+
     accounts_by_type = {acc_type: [] for acc_type in account_type_order}
     total_debit = Decimal('0')
     total_credit = Decimal('0')
-    
+
     for account in accounts:
-        # Calculate balance for this account up to the specified date
-        balance_data = _calculate_account_balance(account, as_of_date)
-        
+        # Get balance from pre-calculated dict (no additional DB query)
+        balance_totals = balances_dict.get(account.code, {'debit': Decimal('0'), 'credit': Decimal('0')})
+        debit = balance_totals['debit']
+        credit = balance_totals['credit']
+
+        # Calculate balance based on account type
+        if account.account_type in ('asset', 'expense'):
+            balance = debit - credit
+            if balance >= 0:
+                debit_balance = balance
+                credit_balance = Decimal('0')
+            else:
+                debit_balance = Decimal('0')
+                credit_balance = abs(balance)
+        else:  # liability, income, equity
+            balance = credit - debit
+            if balance >= 0:
+                debit_balance = Decimal('0')
+                credit_balance = balance
+            else:
+                debit_balance = abs(balance)
+                credit_balance = Decimal('0')
+
         # For expense accounts, always show them even with zero balance for visibility
         # For other account types, only show if they have a non-zero balance
         should_include = (
             account.account_type == 'expense' or
-            balance_data['debit_balance'] != Decimal('0') or 
-            balance_data['credit_balance'] != Decimal('0')
+            debit_balance != Decimal('0') or
+            credit_balance != Decimal('0')
         )
-        
+
         if should_include:
             accounts_by_type[account.account_type].append({
                 'code': account.code,
                 'name': account.name,
-                'debit_balance': balance_data['debit_balance'],
-                'credit_balance': balance_data['credit_balance'],
+                'debit_balance': debit_balance,
+                'credit_balance': credit_balance,
             })
-            
-            total_debit += balance_data['debit_balance']
-            total_credit += balance_data['credit_balance']
-    
+
+            total_debit += debit_balance
+            total_credit += credit_balance
+
     # Calculate difference (should be zero for balanced books)
     difference = total_debit - total_credit
     is_balanced = abs(difference) < Decimal('0.01')  # Allow for minor rounding
-    
+
     return {
         'accounts_by_type': accounts_by_type,
         'account_type_labels': account_type_labels,

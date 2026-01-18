@@ -22,5 +22,6 @@ urlpatterns = [
     path('api/logs/', views.get_session_logs, name='get_session_logs'),
     path('api/entries/<int:entry_id>/approve/', views.approve_entry, name='approve_entry'),
     path('api/entries/<int:entry_id>/reject/', views.reject_entry, name='reject_entry'),
+    path('api/entries/<int:entry_id>/post/', views.post_entry, name='post_entry'),
 ]
 

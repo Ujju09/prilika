@@ -95,8 +95,8 @@
                         {% endfor %}
                         <tr style="background: #f8fafc; font-weight: 600;">
                             <td colspan="2" style="text-align: right;">Total</td>
-                            <td style="text-align: right;">{{ entry.total_amount }}</td>
-                            <td style="text-align: right;">{{ entry.total_amount }}</td>
+                            <td style="text-align: right;">{{ entry.total_amount_calc|default:entry.total_amount }}</td>
+                            <td style="text-align: right;">{{ entry.total_amount_calc|default:entry.total_amount }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -140,8 +140,90 @@
             </div>
         </div>
 
-        <!-- Right Column: Audit Logs -->
+        <!-- Right Column: Review & Audit -->
         <div>
+            <!-- Review and Post Section -->
+            {% if entry.status != 'posted' and entry.status != 'rejected' %}
+            <div
+                style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 15px;">Review & Post</h3>
+
+                {% if entry.review_notes %}
+                <div style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0;">
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px;">REVIEW NOTES</label>
+                    <div style="font-size: 14px; color: #1e293b;">{{ entry.review_notes }}</div>
+                </div>
+                {% endif %}
+
+                <form id="review-form" onsubmit="handleReviewSubmit(event)">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 10px;">Review Checklist</label>
+
+                        <div style="margin-bottom: 8px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" name="checklist_item" value="Debit-Credit balance verified"
+                                    style="margin-right: 8px; width: 16px; height: 16px;" onchange="updateRemarksFromChecklist()">
+                                <span style="font-size: 14px;">Debit-Credit balance verified</span>
+                            </label>
+                        </div>
+
+                        <div style="margin-bottom: 8px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" name="checklist_item" value="Account codes are correct"
+                                    style="margin-right: 8px; width: 16px; height: 16px;" onchange="updateRemarksFromChecklist()">
+                                <span style="font-size: 14px;">Account codes are correct</span>
+                            </label>
+                        </div>
+
+                        <div style="margin-bottom: 8px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" name="checklist_item" value="Narration is clear and complete"
+                                    style="margin-right: 8px; width: 16px; height: 16px;" onchange="updateRemarksFromChecklist()">
+                                <span style="font-size: 14px;">Narration is clear and complete</span>
+                            </label>
+                        </div>
+
+                        <div style="margin-bottom: 8px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" name="checklist_item" value="Transaction date is accurate"
+                                    style="margin-right: 8px; width: 16px; height: 16px;" onchange="updateRemarksFromChecklist()">
+                                <span style="font-size: 14px;">Transaction date is accurate</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Additional Remarks (Optional)</label>
+                        <textarea name="remarks" rows="3"
+                            style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; resize: vertical;"
+                            placeholder="Add any additional notes or concerns..."></textarea>
+                    </div>
+
+                    {% if entry.status == 'approved' %}
+                    <!-- Show Post button for approved entries -->
+                    <button type="button" onclick="handlePost({{ entry.id }})"
+                        style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px;">
+                        Post to Books
+                    </button>
+                    {% else %}
+                    <!-- Show Approve button for non-approved entries -->
+                    <button type="submit"
+                        style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px;">
+                        Approve Entry
+                    </button>
+                    {% endif %}
+
+                    <button type="button" onclick="handleReject({{ entry.id }})"
+                        style="width: 100%; padding: 10px; background: #64748b; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        Reject Entry
+                    </button>
+                </form>
+
+                <div id="review-message" style="margin-top: 15px; display: none; padding: 10px; border-radius: 4px; font-size: 14px;"></div>
+            </div>
+            {% endif %}
+
+            <!-- Audit Log -->
             <div
                 style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: sticky; top: 20px;">
                 <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 20px;">Audit Log</h3>
@@ -177,4 +259,150 @@
         </div>
     </div>
 </div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showMessage(message, isError = false) {
+        const messageDiv = document.getElementById('review-message');
+        messageDiv.textContent = message;
+        messageDiv.style.display = 'block';
+        messageDiv.style.background = isError ? '#fee2e2' : '#dcfce7';
+        messageDiv.style.color = isError ? '#dc2626' : '#16a34a';
+        messageDiv.style.border = isError ? '1px solid #fca5a5' : '1px solid #86efac';
+    }
+
+    function updateRemarksFromChecklist() {
+        const form = document.getElementById('review-form');
+        const checkboxes = form.querySelectorAll('input[name="checklist_item"]');
+        const remarksTextarea = form.querySelector('textarea[name="remarks"]');
+
+        // Get all checked items
+        const checkedItems = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+
+        // Update textarea with checked items
+        remarksTextarea.value = checkedItems.join(', ');
+    }
+
+    async function handleReviewSubmit(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const reviewNotes = formData.get('remarks') || '';
+
+        try {
+            const response = await fetch('{% url "accounting:approve_entry" entry.id %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ notes: reviewNotes })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage('Entry approved successfully! Reloading...');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showMessage(result.error || 'Failed to approve entry', true);
+            }
+        } catch (error) {
+            showMessage('Network error: ' + error.message, true);
+        }
+    }
+
+    async function handlePost(entryId) {
+        if (!confirm('Are you sure you want to post this entry to the books? This action will finalize the entry.')) {
+            return;
+        }
+
+        // Collect any remarks from textarea before posting
+        const form = document.getElementById('review-form');
+        const formData = new FormData(form);
+        const remarks = formData.get('remarks') || '';
+
+        // If there are remarks, save them first
+        if (remarks.trim()) {
+            try {
+                await fetch('{% url "accounting:approve_entry" entry.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ notes: remarks })
+                });
+            } catch (error) {
+                console.error('Failed to save remarks:', error);
+            }
+        }
+
+        // Now post the entry
+        try {
+            const response = await fetch(`/accounting/api/entries/${entryId}/post/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage('Entry posted successfully! Reloading...');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showMessage(result.error || 'Failed to post entry', true);
+            }
+        } catch (error) {
+            showMessage('Network error: ' + error.message, true);
+        }
+    }
+
+    async function handleReject(entryId) {
+        const reason = prompt('Please provide a reason for rejecting this entry:');
+        if (!reason) return;
+
+        try {
+            const response = await fetch(`/accounting/api/entries/${entryId}/reject/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ reason })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage('Entry rejected successfully! Reloading...');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showMessage(result.error || 'Failed to reject entry', true);
+            }
+        } catch (error) {
+            showMessage('Network error: ' + error.message, true);
+        }
+    }
+</script>
 {% endblock %}

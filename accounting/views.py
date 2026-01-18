@@ -4,7 +4,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils.http import url_has_allowed_host_and_scheme
 import json
 import logging
@@ -74,10 +74,12 @@ def journal_view(request):
 @login_required
 def review_entries(request):
     """Render the Review page for non-posted entries - requires authentication"""
-    # Exclude posted entries - show everything else
+    # OPTIMIZED: Annotate total_amount to avoid N+1 queries
     entries = JournalEntry.objects.exclude(
         status='posted'
-    ).prefetch_related('lines').order_by('-transaction_date', '-created_at')
+    ).prefetch_related('lines').annotate(
+        total_amount_calc=Sum('lines__debit')
+    ).order_by('-transaction_date', '-created_at')
 
     return render(request, 'accounting/review_entries.html', {'entries': entries})
 
@@ -85,7 +87,13 @@ def review_entries(request):
 @login_required
 def journal_detail(request, entry_id):
     """Render the detailed view of a journal entry - requires authentication"""
-    entry = get_object_or_404(JournalEntry, id=entry_id)
+    # OPTIMIZED: Prefetch logs and annotate total_amount to avoid N+1 queries
+    entry = get_object_or_404(
+        JournalEntry.objects.prefetch_related('logs', 'lines').annotate(
+            total_amount_calc=Sum('lines__debit')
+        ),
+        id=entry_id
+    )
     return render(request, 'accounting/journal_detail.html', {'entry': entry})
 
 @login_required
@@ -272,8 +280,18 @@ def get_entries(request):
     """
     API to list journal entries for the review queue - requires authentication.
     """
-    entries = JournalEntry.objects.all().order_by('-created_at')
-    
+    # OPTIMIZED: Add pagination
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 50))
+    offset = (page - 1) * page_size
+
+    # OPTIMIZED: Annotate total_amount instead of using property
+    entries = JournalEntry.objects.annotate(
+        total_amount_calc=Sum('lines__debit')
+    ).order_by('-created_at')[offset:offset + page_size]
+
+    total_count = JournalEntry.objects.count()
+
     data = []
     for entry in entries:
         data.append({
@@ -281,14 +299,20 @@ def get_entries(request):
             "entry_number": entry.entry_number,
             "date": entry.transaction_date,
             "narration": entry.narration,
-            "amount": entry.total_amount, # Uses property
+            "amount": entry.total_amount_calc or 0,
             "confidence": entry.ai_confidence,
             "checker_status": entry.checker_status,
             "status": entry.status,
             "created_at": entry.created_at
         })
-        
-    return JsonResponse({"entries": data})
+
+    return JsonResponse({
+        "entries": data,
+        "page": page,
+        "page_size": page_size,
+        "total_count": total_count,
+        "total_pages": (total_count + page_size - 1) // page_size
+    })
 
 @login_required
 @require_http_methods(["GET"])
@@ -357,8 +381,11 @@ def approve_entry(request, entry_id):
     """
     entry = get_object_or_404(JournalEntry, id=entry_id)
     try:
+        data = json.loads(request.body) if request.body else {}
         reviewer = request.user.username
-        entry.approve(reviewer=reviewer)
+        notes = data.get('notes', '')
+
+        entry.approve(reviewer=reviewer, notes=notes)
 
         return JsonResponse({"success": True})
     except Exception as e:
@@ -377,13 +404,32 @@ def reject_entry(request, entry_id):
     try:
         data = json.loads(request.body)
         reason = data.get('reason', 'Rejected by user')
-        reviewer = "Admin"  # In real app, get from request.user
+        reviewer = request.user.username
         entry.reject(reviewer=reviewer, notes=reason)
 
         return JsonResponse({"success": True})
     except Exception as e:
         logger.error(f"Entry rejection error: {e}", exc_info=True)
         return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+@login_required
+@require_http_methods(["POST"])
+def post_entry(request, entry_id):
+    """
+    Post an approved entry to the books - requires authentication.
+
+    Note: CSRF protection enabled. Frontend must include CSRF token in headers.
+    """
+    entry = get_object_or_404(JournalEntry, id=entry_id)
+    try:
+        entry.post()
+        return JsonResponse({"success": True, "message": "Entry posted successfully"})
+    except ValueError as e:
+        logger.warning(f"Entry posting validation error: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Entry posting error: {e}", exc_info=True)
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 @login_required
@@ -504,7 +550,15 @@ def export_evals_json(request):
         "entries": []
     }
     
-    for entry in entries_query.order_by('-transaction_date', '-created_at'):
+    # OPTIMIZED: Add pagination to prevent memory issues
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 100))
+    offset = (page - 1) * page_size
+
+    total_count = entries_query.count()
+    entries_page = entries_query.order_by('-transaction_date', '-created_at')[offset:offset + page_size]
+
+    for entry in entries_page:
         # Build journal entry lines
         lines_data = []
         for line in entry.lines.all():
@@ -514,41 +568,44 @@ def export_evals_json(request):
                 "debit": float(line.debit) if line.debit else 0,
                 "credit": float(line.credit) if line.credit else 0
             })
-        
+
+        # OPTIMIZED: Cache logs to avoid duplicate query
+        logs_list = list(entry.logs.all().order_by('timestamp'))
+
         # Build agent logs
         logs_data = []
-        for log in entry.logs.all().order_by('timestamp'):
+        for log in logs_list:
             log_entry = {
                 "timestamp": log.timestamp.isoformat(),
                 "stage": log.stage,
                 "level": log.level,
                 "message": log.message
             }
-            
+
             # Include prompt and completion if available
             if log.prompt_sent:
                 log_entry["prompt"] = log.prompt_sent
             if log.response_received:
                 log_entry["completion"] = log.response_received
-            
+
             # Include token usage if available
             if log.input_tokens is not None:
                 log_entry["tokens"] = {
                     "input": log.input_tokens,
                     "output": log.output_tokens
                 }
-            
+
             if log.duration_ms is not None:
                 log_entry["duration_ms"] = log.duration_ms
-            
+
             logs_data.append(log_entry)
-        
-        # Aggregate performance metrics
+
+        # Aggregate performance metrics (reuse cached logs_list)
         total_input_tokens = 0
         total_output_tokens = 0
         total_duration_ms = 0
-        
-        for log in entry.logs.all():
+
+        for log in logs_list:
             if log.input_tokens:
                 total_input_tokens += log.input_tokens
             if log.output_tokens:
@@ -605,7 +662,12 @@ def export_evals_json(request):
         }
         
         export_data["entries"].append(entry_data)
-    
+
+    # Add pagination metadata
+    export_data["export_metadata"]["page"] = page
+    export_data["export_metadata"]["page_size"] = page_size
+    export_data["export_metadata"]["total_pages"] = (total_count + page_size - 1) // page_size
+
     # Return JSON response
     response = JsonResponse(export_data, json_dumps_params={'indent': 2})
     response['Content-Disposition'] = f'attachment; filename="agent_evals_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'

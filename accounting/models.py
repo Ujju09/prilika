@@ -104,6 +104,12 @@ class JournalEntry(models.Model):
     class Meta:
         ordering = ['-transaction_date', '-created_at']
         verbose_name_plural = 'Journal Entries'
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['status', 'transaction_date']),
+            models.Index(fields=['transaction_date']),
+            models.Index(fields=['-created_at']),
+        ]
     
     def save(self, *args, **kwargs):
         if not self.entry_number:
@@ -144,16 +150,19 @@ class JournalEntry(models.Model):
         return debit == credit
     
     def approve(self, reviewer: str, notes: str = ""):
-        """Approve entry for posting"""
+        """Approve entry for posting or update notes if already approved"""
         from django.utils import timezone
-        
+
         if not self.is_balanced:
             raise ValueError("Cannot approve unbalanced entry")
-        
-        self.status = self.Status.APPROVED
+
+        # Allow updating notes even if already approved
+        if self.status != self.Status.APPROVED:
+            self.status = self.Status.APPROVED
+            self.reviewed_at = timezone.now()
+
         self.reviewed_by = reviewer
         self.review_notes = notes
-        self.reviewed_at = timezone.now()
         self.save()
     
     def reject(self, reviewer: str, notes: str):
@@ -202,10 +211,14 @@ class JournalLine(models.Model):
         default=Decimal('0'),
         validators=[MinValueValidator(Decimal('0'))]
     )
-    
+
     class Meta:
         ordering = ['id']
-    
+        indexes = [
+            models.Index(fields=['account_code']),
+            models.Index(fields=['journal_entry', 'account_code']),
+        ]
+
     def __str__(self):
         if self.debit > 0:
             return f"Dr. {self.account_name}: {self.debit}"

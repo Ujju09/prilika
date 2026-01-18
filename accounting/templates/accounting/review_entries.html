@@ -259,7 +259,7 @@
 
                 <div class="entry-footer">
                     <div class="entry-amount">
-                        ₹ {{ entry.total_amount|floatformat:2 }}
+                        ₹ {{ entry.total_amount_calc|default:entry.total_amount|floatformat:2 }}
                     </div>
 
                     <div class="entry-indicators">

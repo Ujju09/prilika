@@ -13,11 +13,11 @@ from .models import Account, JournalLine
 def get_profit_loss(from_date: Optional[date] = None, to_date: Optional[date] = None) -> Dict:
     """
     Calculate Profit & Loss statement for a date range.
-    
+
     Args:
         from_date: Start date of the period. If None, includes all historical data.
         to_date: End date of the period. If None, uses current date.
-        
+
     Returns:
         Dictionary containing:
         - income_accounts: List of income accounts with balances
@@ -31,23 +31,67 @@ def get_profit_loss(from_date: Optional[date] = None, to_date: Optional[date] = 
     """
     if to_date is None:
         to_date = date.today()
-    
+
     # Get all active income and expense accounts
     income_accounts = Account.objects.filter(
         is_active=True,
         account_type='income'
     ).order_by('code')
-    
+
     expense_accounts = Account.objects.filter(
         is_active=True,
         account_type='expense'
     ).order_by('code')
-    
-    # Calculate balances for each income account
+
+    # OPTIMIZED: Batch query for all income account balances
+    income_filters = Q(
+        journal_entry__status='posted',
+        journal_entry__transaction_date__lte=to_date
+    )
+    if from_date:
+        income_filters &= Q(journal_entry__transaction_date__gte=from_date)
+
+    income_balances = JournalLine.objects.filter(
+        income_filters,
+        account_code__in=[acc.code for acc in income_accounts]
+    ).values('account_code').annotate(
+        total_debit=Sum('debit'),
+        total_credit=Sum('credit')
+    )
+
+    # Create lookup dict for income balances
+    income_balances_dict = {
+        item['account_code']: (item['total_credit'] or Decimal('0')) - (item['total_debit'] or Decimal('0'))
+        for item in income_balances
+    }
+
+    # OPTIMIZED: Batch query for all expense account balances
+    expense_filters = Q(
+        journal_entry__status='posted',
+        journal_entry__transaction_date__lte=to_date
+    )
+    if from_date:
+        expense_filters &= Q(journal_entry__transaction_date__gte=from_date)
+
+    expense_balances = JournalLine.objects.filter(
+        expense_filters,
+        account_code__in=[acc.code for acc in expense_accounts]
+    ).values('account_code').annotate(
+        total_debit=Sum('debit'),
+        total_credit=Sum('credit')
+    )
+
+    # Create lookup dict for expense balances
+    expense_balances_dict = {
+        item['account_code']: (item['total_debit'] or Decimal('0')) - (item['total_credit'] or Decimal('0'))
+        for item in expense_balances
+    }
+
+    # Build income list from pre-calculated balances
     income_list = []
     total_income = Decimal('0')
     for account in income_accounts:
-        balance = _calculate_pnl_account_balance(account, from_date, to_date)
+        balance = income_balances_dict.get(account.code, Decimal('0'))
         if balance != Decimal('0'):
             income_list.append({
                 'code': account.code,
@@ -55,12 +99,12 @@ def get_profit_loss(from_date: Optional[date] = None, to_date: Optional[date] = 
                 'amount': balance
             })
             total_income += balance
-    
-    # Calculate balances for each expense account
+
+    # Build expense list from pre-calculated balances
     expense_list = []
     total_expenses = Decimal('0')
     for account in expense_accounts:
-        balance = _calculate_pnl_account_balance(account, from_date, to_date)
+        balance = expense_balances_dict.get(account.code, Decimal('0'))
         if balance != Decimal('0'):
             expense_list.append({
                 'code': account.code,
@@ -68,11 +112,11 @@ def get_profit_loss(from_date: Optional[date] = None, to_date: Optional[date] = 
                 'amount': balance
             })
             total_expenses += balance
-    
+
     # Calculate net profit/loss
     net_profit_loss = total_income - total_expenses
     is_profit = net_profit_loss >= 0
-    
+
     return {
         'income_accounts': income_list,
         'total_income': total_income,
