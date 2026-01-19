@@ -43,6 +43,7 @@ These rules override everything else. Violating them will cause errors.
 |A003-SD|Shree Cement - Security Deposit|**Non-Current Asset.** ₹25 lakh refundable security deposit. **NEVER use for invoices or receipts!**|
 |A003-CR|Shree Cement - Commission Receivable|**Current Asset.** Commission receivable from Shree Cement. Use for ALL invoice and payment transactions with Shree Cement.|
 |A004|TDS Receivable|Tax deducted at source by payers. Asset until adjusted against tax liability.|
+|A005|Salary Advance|Advances given to employees against salary.|
 
 ### Liabilities
 
@@ -325,6 +326,158 @@ Dr. L002  SGST Payable           [Amount ÷ 2]
 ```
 
 ---
+
+### 11. Salary Advance
+**Trigger phrases:** "given salary advance", "salary advance to", "advance for salary"
+
+**Entry:**
+
+```
+Dr. A005  Salary Advance         [Amount]
+    Cr. A001  SBI Current A/c        [Amount]
+```
+---
+
+### 12. Salary with Advance Adjustment
+
+**Trigger phrases:** "salary... adjust", "salary... from advance", "salary... advance"
+
+**Logic:**
+
+- Full salary amount is ALWAYS the expense (work was performed)
+- Part or all is adjusted from existing advance
+- Balance (if any) is paid in cash
+- **Adjustment + Cash = Total Salary** (must balance)
+
+**Variations:**
+
+#### A. Full adjustment (no cash)
+
+When the entire salary is adjusted from advance:
+
+**Input examples:**
+- "Salary 20,000 to Vikash, adjust from advance"
+- "Vikash salary 20,000 from advance"
+- "20,000 salary to Vikash, fully adjusted from advance"
+
+**Entry:**
+
+```
+Dr. E001  Salary Expense         20,000
+    Cr. A005  Salary Advance         20,000
+```
+
+**Narration:** "Salary for [Name] adjusted against advance"
+
+---
+
+#### B. Partial adjustment (part cash, part adjusted)
+
+When part of salary is adjusted and balance is paid:
+
+**Input examples:**
+- "Salary 20,000 to Vikash, adjust 12,000 from advance, pay 8,000"
+- "Vikash salary 20,000, 12,000 from advance, rest cash"
+- "Salary 20,000 to Vikash, advance 12,000, balance bank"
+- "20,000 salary Vikash, adjust advance 12,000"
+
+**Entry:**
+
+```
+Dr. E001  Salary Expense         20,000
+    Cr. A005  Salary Advance         12,000
+    Cr. A001  SBI Current A/c         8,000
+```
+
+**Narration:** "Salary for [Name]: ₹12,000 adjusted from advance, ₹8,000 paid via bank"
+
+---
+
+**Validation Rules:**
+
+1. **Balance check:** Adjustment amount + Cash paid MUST equal total salary
+2. **Default assumption:** If only adjustment mentioned (no cash amount), assume full adjustment (no cash)
+3. **Cash calculation:** If adjustment specified but cash not mentioned, calculate: Cash = Total - Adjustment
+4. **Imbalance handling:** If amounts don't add up, flag with confidence 0.50 and warning
+5. **Bank account:** Use default bank (A001) unless specified otherwise
+
+**Confidence adjustments:**
+
+|Scenario|Confidence Impact|
+|---|---|
+|Full adjustment clearly stated|Base confidence|
+|Partial adjustment with explicit amounts|Base confidence|
+|Partial adjustment with "rest cash" or "balance"|Base confidence|
+|Amounts don't clearly add up|-0.30, add warning|
+|Missing employee name|-0.10, add warning|
+
+**Example outputs:**
+
+**Example 1: Full adjustment**
+```json
+{
+  "transaction_date": "2024-12-15",
+  "transaction_type": "salary_adjustment",
+  "narration": "Salary for Vikash adjusted against advance",
+  "reference": null,
+  "lines": [
+    {
+      "account_code": "E001",
+      "account_name": "Salary Expense",
+      "debit": 20000.00,
+      "credit": 0
+    },
+    {
+      "account_code": "A005",
+      "account_name": "Salary Advance",
+      "debit": 0,
+      "credit": 20000.00
+    }
+  ],
+  "total_debit": 20000.00,
+  "total_credit": 20000.00,
+  "is_balanced": true,
+  "reasoning": "Full salary expense of ₹20,000 adjusted against existing salary advance. No cash payment required.",
+  "confidence": 0.85,
+  "warnings": []
+}
+```
+
+**Example 2: Partial adjustment**
+```json
+{
+  "transaction_date": "2024-12-15",
+  "transaction_type": "salary_adjustment",
+  "narration": "Salary for Vikash: ₹12,000 adjusted from advance, ₹8,000 paid via bank",
+  "reference": null,
+  "lines": [
+    {
+      "account_code": "E001",
+      "account_name": "Salary Expense",
+      "debit": 20000.00,
+      "credit": 0
+    },
+    {
+      "account_code": "A005",
+      "account_name": "Salary Advance",
+      "debit": 0,
+      "credit": 12000.00
+    },
+    {
+      "account_code": "A001",
+      "account_name": "SBI Current A/c",
+      "debit": 0,
+      "credit": 8000.00
+    }
+  ],
+  "total_debit": 20000.00,
+  "total_credit": 20000.00,
+  "is_balanced": true,
+  "reasoning": "Salary expense of ₹20,000 recorded. ₹12,000 adjusted against existing advance, remaining ₹8,000 paid from bank.",
+  "confidence": 0.85,
+  "warnings": []
+}
+```
 
 ## Bank Account Selection
 

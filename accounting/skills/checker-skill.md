@@ -58,6 +58,7 @@ Only these accounts are valid:
 |A003-CR|Shree Cement - Commission Receivable|Asset (Current)|For all Shree Cement transactions|
 |A003|(Alias for A003-CR)|Asset (Current)|Accept for backward compatibility|
 |A004|TDS Receivable|Asset||
+|A005|Salary Advance|Asset||
 |L001|CGST Payable|Liability||
 |L002|SGST Payable|Liability||
 |I001|CFA Commission|Income||
@@ -101,7 +102,7 @@ Only these accounts are valid:
 **Valid codes:**
 
 ```
-A001, A002, A003, A003-SD, A003-CR, A004
+A001, A002, A003, A003-SD, A003-CR, A004, A005
 L001, L002
 I001
 E001, E002, E003, E004
@@ -191,7 +192,7 @@ TDS Rate = TDS Amount ÷ (Cash Received + TDS Amount) × 100
 **Required fields:**
 
 - `transaction_date` — valid date string
-- `transaction_type` — one of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital, gst_payment
+- `transaction_type` — one of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital, gst_payment,salary_advance,salary_adjustment
 - `narration` — non-empty string
 - `lines` — array with at least 2 entries
 
@@ -199,7 +200,7 @@ TDS Rate = TDS Amount ÷ (Cash Received + TDS Amount) × 100
 |---|---|---|
 |Missing required field|**ERROR**|"Missing required field: [X]"|
 |Empty narration|**WARNING**|"Narration is empty. Add description for audit trail"|
-|Invalid transaction_type|**ERROR**|"Invalid transaction type: [X]. Must be one of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital, gst_payment"|
+|Invalid transaction_type|**ERROR**|"Invalid transaction type: [X]. Must be one of: invoice, receipt, receipt_with_tds, salary, expense, drawings, capital, gst_payment,salary_advance,salary_adjustment"|
 
 ---
 
@@ -232,6 +233,8 @@ For each line:
 |receipt|Dr: A001/A002, Cr: A003-CR (or A003)|
 |receipt_with_tds|Dr: A001/A002 + A004, Cr: A003-CR (or A003)|
 |salary|Dr: E001, Cr: A001/A002|
+|salary_advance|Dr: A005, Cr: A001/A002|
+|salary_adjustment|Dr: E001, Cr: A001/A002|
 |expense|Dr: E001/E002/E003/E004, Cr: A001/A002|
 |drawings|Dr: EQ002, Cr: A001/A002|
 |capital|Dr: A001/A002, Cr: EQ001|

@@ -27,6 +27,8 @@ class JournalEntry(models.Model):
         RECEIPT = 'receipt', 'Receipt'
         RECEIPT_WITH_TDS = 'receipt_with_tds', 'Receipt with TDS'
         SALARY = 'salary', 'Salary'
+        SALARY_ADVANCE = 'salary_advance', 'Salary Advance'
+        SALARY_ADJUSTMENT = 'salary_adjustment', 'Salary Adjustment'
         EXPENSE = 'expense', 'Expense'
         DRAWINGS = 'drawings', 'Drawings'
         CAPITAL = 'capital', 'Capital'
@@ -293,6 +295,7 @@ class Account(models.Model):
             ('A003-SD', 'Shree Cement - Security Deposit', 'asset', 'security_deposit', 'Security deposit with Shree Cement - Non-Current Asset'),
             ('A003-CR', 'Shree Cement - Commission Receivable', 'asset', 'sundry_debtors', 'Commission receivable from Shree Cement - Current Asset'),
             ('A004', 'TDS Receivable', 'asset', 'tax_receivable', 'Tax deducted at source by payers'),
+            ('A005', 'Salary Advance', 'asset', 'advance', 'Advances given to employees against salary'),
             ('L001', 'CGST Payable', 'liability', 'tax_payable', 'Central GST collected'),
             ('L002', 'SGST Payable', 'liability', 'tax_payable', 'State GST collected'),
             ('I001', 'CFA Commission', 'income', 'service_income', 'Commission income from CFA services'),
