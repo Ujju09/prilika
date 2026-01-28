@@ -15,6 +15,7 @@ from .service import process_and_save
 from .trial_balance_service import get_trial_balance
 from .pnl_service import get_profit_loss
 from .ledger_service import get_account_ledger
+from .balance_sheet_service import get_balance_sheet
 
 logger = logging.getLogger('accounting')
 
@@ -216,6 +217,56 @@ def export_pnl_pdf(request):
     
     filename = f"profit_loss_{from_date or 'inception'}_{to_date}.pdf"
     
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=filename
+    )
+
+
+@login_required
+def balance_sheet_view(request):
+    """Render Balance Sheet in ICAI format - requires authentication"""
+    # Get date parameter
+    as_of_date_str = request.GET.get('as_of_date')
+
+    if as_of_date_str:
+        try:
+            as_of_date = dt_date.fromisoformat(as_of_date_str)
+        except ValueError:
+            as_of_date = dt_date.today()
+    else:
+        as_of_date = dt_date.today()
+
+    # Get Balance Sheet data
+    bs_data = get_balance_sheet(as_of_date)
+
+    return render(request, 'accounting/balance_sheet.html', bs_data)
+
+
+@login_required
+def export_balance_sheet_pdf(request):
+    """Generate and download Balance Sheet PDF - requires authentication"""
+    from .balance_sheet_pdf import generate_balance_sheet_pdf
+
+    # Get date parameter
+    as_of_date_str = request.GET.get('as_of_date')
+
+    if as_of_date_str:
+        try:
+            as_of_date = dt_date.fromisoformat(as_of_date_str)
+        except ValueError:
+            as_of_date = dt_date.today()
+    else:
+        as_of_date = dt_date.today()
+
+    # Get Balance Sheet data
+    bs_data = get_balance_sheet(as_of_date)
+
+    buffer = generate_balance_sheet_pdf(bs_data)
+
+    filename = f"balance_sheet_{as_of_date}.pdf"
+
     return FileResponse(
         buffer,
         as_attachment=True,

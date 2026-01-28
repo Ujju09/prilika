@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance Sheet - ICAI Format</title>
+    {% load static %}
+    {% load accounting_extras %}
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --border: #e2e8f0;
+            --bg-header: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .breadcrumb a {
+            text-decoration: none;
+            color: var(--primary);
+            transition: color 0.2s;
+        }
+
+        .breadcrumb a:hover {
+            color: #1d4ed8;
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-muted);
+        }
+
+        .breadcrumb-current {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--text-main);
+            padding-bottom: 20px;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .date-info {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        .balance-status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .balance-status.balanced {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .balance-status.unbalanced {
+            background: #fee2e2;
+            color: var(--error);
+        }
+
+        .date-filter {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-header);
+            border-radius: 6px;
+        }
+
+        .date-filter input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .date-filter button {
+            padding: 8px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .date-filter button:hover {
+            background: #1d4ed8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--border);
+            padding: 12px;
+        }
+
+        th {
+            background: var(--bg-header);
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .col-code {
+            width: 12%;
+            text-align: center;
+        }
+
+        .col-name {
+            width: 58%;
+        }
+
+        .col-amount {
+            width: 30%;
+            text-align: right;
+        }
+
+        .section-header {
+            background: #cbd5e1;
+            font-weight: 700;
+            text-align: left;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+
+        .subsection-header {
+            background: #e2e8f0;
+            font-weight: 600;
+            text-align: left;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+        }
+
+        .account-row td:first-child {
+            padding-left: 24px;
+        }
+
+        .subtotal-row {
+            background: var(--bg-header);
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .total-row {
+            background: #cbd5e1;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .grand-total-row {
+            background: var(--text-main);
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .amount-cell {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .account-link {
+            text-decoration: none;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+
+        .account-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+
+        .negative-balance {
+            color: var(--error);
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+
+            .back-link,
+            .date-filter {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <nav class="breadcrumb">
+                    <a href="{% url 'accounting:index' %}">Agent</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">Balance Sheet</span>
+                </nav>
+                <h1>Balance Sheet</h1>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'accounting:export_balance_sheet_pdf' %}?as_of_date={{ as_of_date|date:'Y-m-d' }}"
+                    class="back-link">⬇ Export PDF</a>
+            </div>
+        </header>
+
+        <div class="date-info">
+            As at: {{ as_of_date|date:"d F Y" }}
+        </div>
+
+        <!-- Date Filter Form -->
+        <form method="get" class="date-filter">
+            <label for="as_of_date">Select Date:</label>
+            <input type="date" id="as_of_date" name="as_of_date" value="{{ as_of_date|date:'Y-m-d' }}">
+            <button type="submit">Update</button>
+        </form>
+
+        <!-- Balance Status -->
+        <div class="balance-status {% if is_balanced %}balanced{% else %}unbalanced{% endif %}">
+            {% if is_balanced %}
+            ✓ Balance Sheet Equation: Assets (₹{{ total_assets|floatformat:2 }}) = Liabilities + Equity
+            (₹{{ liabilities_plus_equity|floatformat:2 }})
+            {% else %}
+            ⚠ Balance Sheet NOT Balanced | Assets: ₹{{ total_assets|floatformat:2 }} | Liabilities + Equity:
+            ₹{{ liabilities_plus_equity|floatformat:2 }} | Difference: ₹{{ difference|floatformat:2 }}
+            {% endif %}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-code">Account Code</th>
+                    <th class="col-name">Particulars</th>
+                    <th class="col-amount">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- ASSETS SECTION -->
+                <tr class="section-header">
+                    <td colspan="3">ASSETS</td>
+                </tr>
+
+                <!-- Current Assets Subsection -->
+                {% if current_assets %}
+                <tr class="subsection-header">
+                    <td colspan="3">Current Assets</td>
+                </tr>
+                {% for account in current_assets %}
+                <tr class="account-row">
+                    <td class="col-code">{{ account.code }}</td>
+                    <td>
+                        <a href="{% url 'accounting:account_ledger' account.code %}" class="account-link">
+                            {{ account.name }}
+                        </a>
+                    </td>
+                    <td class="col-amount amount-cell">{{ account.balance|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="subtotal-row">
+                    <td colspan="2" style="text-align: right;">Total Current Assets</td>
+                    <td class="col-amount amount-cell">{{ total_current_assets|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+
+                <!-- Non-Current Assets Subsection -->
+                {% if non_current_assets %}
+                <tr class="subsection-header">
+                    <td colspan="3">Non-Current Assets</td>
+                </tr>
+                {% for account in non_current_assets %}
+                <tr class="account-row">
+                    <td class="col-code">{{ account.code }}</td>
+                    <td>
+                        <a href="{% url 'accounting:account_ledger' account.code %}" class="account-link">
+                            {{ account.name }}
+                        </a>
+                    </td>
+                    <td class="col-amount amount-cell">{{ account.balance|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="subtotal-row">
+                    <td colspan="2" style="text-align: right;">Total Non-Current Assets</td>
+                    <td class="col-amount amount-cell">{{ total_non_current_assets|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+
+                <!-- Total Assets -->
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: right;">TOTAL ASSETS</td>
+                    <td class="col-amount amount-cell">{{ total_assets|floatformat:2 }}</td>
+                </tr>
+
+                <!-- LIABILITIES SECTION -->
+                <tr class="section-header">
+                    <td colspan="3">LIABILITIES</td>
+                </tr>
+
+                <!-- Current Liabilities Subsection -->
+                {% if current_liabilities %}
+                <tr class="subsection-header">
+                    <td colspan="3">Current Liabilities</td>
+                </tr>
+                {% for account in current_liabilities %}
+                <tr class="account-row">
+                    <td class="col-code">{{ account.code }}</td>
+                    <td>
+                        <a href="{% url 'accounting:account_ledger' account.code %}" class="account-link">
+                            {{ account.name }}
+                        </a>
+                    </td>
+                    <td class="col-amount amount-cell">{{ account.balance|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="subtotal-row">
+                    <td colspan="2" style="text-align: right;">Total Current Liabilities</td>
+                    <td class="col-amount amount-cell">{{ total_current_liabilities|floatformat:2 }}</td>
+                </tr>
+                {% else %}
+                <tr class="subsection-header">
+                    <td colspan="3">Current Liabilities</td>
+                </tr>
+                <tr class="subtotal-row">
+                    <td colspan="2" style="text-align: right;">Total Current Liabilities</td>
+                    <td class="col-amount amount-cell">0.00</td>
+                </tr>
+                {% endif %}
+
+                <!-- Total Liabilities -->
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: right;">TOTAL LIABILITIES</td>
+                    <td class="col-amount amount-cell">{{ total_liabilities|floatformat:2 }}</td>
+                </tr>
+
+                <!-- EQUITY SECTION -->
+                <tr class="section-header">
+                    <td colspan="3">EQUITY</td>
+                </tr>
+
+                {% for account in equity_accounts %}
+                <tr class="account-row">
+                    <td class="col-code">{{ account.code }}</td>
+                    <td>
+                        <a href="{% url 'accounting:account_ledger' account.code %}" class="account-link">
+                            {{ account.name }}
+                        </a>
+                    </td>
+                    <td class="col-amount amount-cell {% if account.balance < 0 %}negative-balance{% endif %}">
+                        {% if account.balance < 0 %}
+                        ({{ account.balance|floatformat:2|slice:"1:" }})
+                        {% else %}
+                        {{ account.balance|floatformat:2 }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+
+                <!-- Retained Earnings (calculated, not a ledger account) -->
+                <tr class="account-row">
+                    <td class="col-code">-</td>
+                    <td>Retained Earnings</td>
+                    <td class="col-amount amount-cell {% if retained_earnings < 0 %}negative-balance{% endif %}">
+                        {% if retained_earnings < 0 %}
+                        ({{ retained_earnings|floatformat:2|slice:"1:" }})
+                        {% else %}
+                        {{ retained_earnings|floatformat:2 }}
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <!-- Total Equity -->
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: right;">TOTAL EQUITY</td>
+                    <td class="col-amount amount-cell">{{ total_equity|floatformat:2 }}</td>
+                </tr>
+
+                <!-- Grand Total -->
+                <tr class="grand-total-row">
+                    <td colspan="2" style="text-align: right;">TOTAL LIABILITIES + EQUITY</td>
+                    <td class="col-amount amount-cell">{{ liabilities_plus_equity|floatformat:2 }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
