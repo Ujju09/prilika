@@ -850,7 +850,7 @@ def create_share_link(request):
         expires_at=expires_at,
     )
 
-    share_url = f"{settings.SITE_URL}/accounting/shared/{token}/"
+    share_url = f"https://prilika-production.up.railway.app/accounting/shared/{token}/"
     return JsonResponse({'url': share_url, 'expires_at': expires_at.isoformat()})
 
 
