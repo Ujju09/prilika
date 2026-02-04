@@ -8,9 +8,13 @@ from django.db.models import Count, Q, Sum
 from django.utils.http import url_has_allowed_host_and_scheme
 import json
 import logging
-from datetime import date as dt_date
+import secrets
+from datetime import date as dt_date, timedelta
 
-from .models import JournalEntry, AgentLog
+from django.utils import timezone
+from django.conf import settings
+
+from .models import JournalEntry, AgentLog, SharedReport
 from .service import process_and_save
 from .trial_balance_service import get_trial_balance
 from .pnl_service import get_profit_loss
@@ -69,7 +73,11 @@ def journal_view(request):
         status__in=['posted', 'approved', 'pending_review']
     ).prefetch_related('lines').order_by('-transaction_date', '-entry_number')
 
-    return render(request, 'accounting/journal.html', {'entries': entries})
+    return render(request, 'accounting/journal.html', {
+        'entries': entries,
+        'SHARE_REPORT_TYPE': 'journal',
+        'SHARE_REPORT_PARAMS': {},
+    })
 
 
 @login_required
@@ -130,6 +138,8 @@ def trial_balance_view(request):
 
     # Get trial balance data
     tb_data = get_trial_balance(as_of_date)
+    tb_data['SHARE_REPORT_TYPE'] = 'trial_balance'
+    tb_data['SHARE_REPORT_PARAMS'] = {'as_of_date': as_of_date.isoformat()}
 
     return render(request, 'accounting/trial_balance.html', tb_data)
 
@@ -183,6 +193,11 @@ def profit_loss_view(request):
 
     # Get P&L data
     pnl_data = get_profit_loss(from_date, to_date)
+    pnl_data['SHARE_REPORT_TYPE'] = 'profit_loss'
+    pnl_data['SHARE_REPORT_PARAMS'] = {
+        'from_date': from_date.isoformat() if from_date else None,
+        'to_date': to_date.isoformat(),
+    }
 
     return render(request, 'accounting/profit_loss.html', pnl_data)
 
@@ -240,6 +255,8 @@ def balance_sheet_view(request):
 
     # Get Balance Sheet data
     bs_data = get_balance_sheet(as_of_date)
+    bs_data['SHARE_REPORT_TYPE'] = 'balance_sheet'
+    bs_data['SHARE_REPORT_PARAMS'] = {'as_of_date': as_of_date.isoformat()}
 
     return render(request, 'accounting/balance_sheet.html', bs_data)
 
@@ -722,5 +739,132 @@ def export_evals_json(request):
     # Return JSON response
     response = JsonResponse(export_data, json_dumps_params={'indent': 2})
     response['Content-Disposition'] = f'attachment; filename="agent_evals_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
-    
+
     return response
+
+
+# ---------------------------------------------------------------------------
+# Shared (public, view-only) report views
+# ---------------------------------------------------------------------------
+
+def shared_report_view(request, token):
+    """
+    Public view-only report endpoint. No authentication required.
+    Looks up the SharedReport by token; if missing, revoked, or expired,
+    returns the same neutral "expired" page (no info leakage).
+    """
+    record = SharedReport.objects.filter(token=token).first()
+
+    if record is None or not record.is_valid:
+        return render(request, 'accounting/shared_expired.html')
+
+    params = record.parameters
+    report_type = record.report_type
+
+    if report_type == 'journal':
+        entries = JournalEntry.objects.filter(
+            status__in=['posted', 'approved', 'pending_review']
+        ).prefetch_related('lines').order_by('-transaction_date', '-entry_number')
+        context = {'entries': entries}
+        template = 'accounting/journal.html'
+
+    elif report_type == 'trial_balance':
+        as_of_date = dt_date.fromisoformat(params['as_of_date'])
+        context = get_trial_balance(as_of_date)
+        template = 'accounting/trial_balance.html'
+
+    elif report_type == 'profit_loss':
+        from_date_str = params.get('from_date')
+        from_date = dt_date.fromisoformat(from_date_str) if from_date_str else None
+        to_date = dt_date.fromisoformat(params['to_date'])
+        context = get_profit_loss(from_date, to_date)
+        template = 'accounting/profit_loss.html'
+
+    elif report_type == 'balance_sheet':
+        as_of_date = dt_date.fromisoformat(params['as_of_date'])
+        context = get_balance_sheet(as_of_date)
+        template = 'accounting/balance_sheet.html'
+
+    else:
+        return render(request, 'accounting/shared_expired.html')
+
+    context['is_shared'] = True
+    context['expires_at'] = record.expires_at
+    return render(request, template, context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def create_share_link(request):
+    """
+    Generate a secret shareable link for a report.
+    Expects JSON: { "report_type": "...", "parameters": {...}, "ttl_hours": N }
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    report_type = data.get('report_type')
+    parameters = data.get('parameters', {})
+    ttl_hours = data.get('ttl_hours')
+
+    # Validate report_type
+    valid_types = {'journal', 'trial_balance', 'profit_loss', 'balance_sheet'}
+    if report_type not in valid_types:
+        return JsonResponse({'error': 'Invalid report_type'}, status=400)
+
+    # Validate ttl_hours
+    try:
+        ttl_hours = float(ttl_hours)
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'ttl_hours must be a number'}, status=400)
+    if ttl_hours <= 0:
+        return JsonResponse({'error': 'ttl_hours must be positive'}, status=400)
+    ttl_hours = min(ttl_hours, 720)  # cap at 30 days
+
+    # Validate date parameters by parsing them
+    try:
+        if report_type == 'journal':
+            parameters = {}  # journal takes no parameters
+        elif report_type in ('trial_balance', 'balance_sheet'):
+            dt_date.fromisoformat(parameters['as_of_date'])
+            parameters = {'as_of_date': parameters['as_of_date']}
+        elif report_type == 'profit_loss':
+            from_date_str = parameters.get('from_date')
+            if from_date_str:
+                dt_date.fromisoformat(from_date_str)
+            dt_date.fromisoformat(parameters['to_date'])
+            parameters = {'from_date': from_date_str, 'to_date': parameters['to_date']}
+    except (KeyError, ValueError) as e:
+        return JsonResponse({'error': f'Invalid parameters: {e}'}, status=400)
+
+    token = secrets.token_urlsafe(32)
+    expires_at = timezone.now() + timedelta(hours=ttl_hours)
+
+    SharedReport.objects.create(
+        token=token,
+        report_type=report_type,
+        parameters=parameters,
+        created_by=request.user,
+        expires_at=expires_at,
+    )
+
+    share_url = f"{settings.SITE_URL}/accounting/shared/{token}/"
+    return JsonResponse({'url': share_url, 'expires_at': expires_at.isoformat()})
+
+
+@login_required
+@require_http_methods(["POST"])
+def revoke_share_link(request, share_id):
+    """
+    Revoke a shared report link. Users can only revoke their own links.
+    Returns 404 (not 403) if not found — avoids confirming other users' links exist.
+    """
+    record = SharedReport.objects.filter(id=share_id, created_by=request.user).first()
+    if record is None:
+        return JsonResponse({'error': 'Not found'}, status=404)
+
+    record.is_revoked = True
+    record.save(update_fields=['is_revoked'])
+    return JsonResponse({'success': True})

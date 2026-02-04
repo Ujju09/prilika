@@ -377,3 +377,49 @@ class AgentLog(models.Model):
 
     def __str__(self):
         return f"[{self.timestamp}] {self.stage}: {self.message}"
+
+
+class SharedReport(models.Model):
+    """
+    A secret, view-only, auto-expiring link to a financial report.
+    The token is cryptographically random and opaque — the URL reveals
+    nothing about which report or which date is being shared.
+    """
+
+    class ReportType(models.TextChoices):
+        JOURNAL = 'journal', 'Journal Register'
+        TRIAL_BALANCE = 'trial_balance', 'Trial Balance'
+        PROFIT_LOSS = 'profit_loss', 'Profit & Loss'
+        BALANCE_SHEET = 'balance_sheet', 'Balance Sheet'
+
+    token = models.CharField(max_length=64, unique=True)
+    report_type = models.CharField(max_length=20, choices=ReportType.choices)
+    # Date parameters as ISO strings.
+    # Journal:        {}
+    # Trial Balance:  {"as_of_date": "2026-01-15"}
+    # P&L:            {"from_date": "2026-01-01" | null, "to_date": "2026-01-31"}
+    # Balance Sheet:  {"as_of_date": "2026-01-15"}
+    parameters = models.JSONField(default=dict)
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='shared_reports'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_revoked = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['created_by', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"SharedReport({self.report_type}, expires={self.expires_at})"
+
+    @property
+    def is_valid(self):
+        from django.utils import timezone
+        return not self.is_revoked and self.expires_at > timezone.now()

@@ -18,6 +18,11 @@ urlpatterns = [
     path('balance-sheet/export/', views.export_balance_sheet_pdf, name='export_balance_sheet_pdf'),
     path('evals/', views.evals_view, name='evals_view'),
     path('evals/export/', views.export_evals_json, name='export_evals_json'),
+    # Shared report (public, no auth required)
+    path('shared/<str:token>/', views.shared_report_view, name='shared_report_view'),
+    # Share link management (authenticated)
+    path('api/share/', views.create_share_link, name='create_share_link'),
+    path('api/share/<int:share_id>/revoke/', views.revoke_share_link, name='revoke_share_link'),
     path('api/process/', views.process_transaction, name='process_transaction'),
     path('api/entries/', views.get_entries, name='get_entries'),
     path('api/entries/<int:entry_id>/logs/', views.get_entry_logs, name='get_entry_logs'),
