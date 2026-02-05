@@ -5,6 +5,7 @@ app_name = 'accounting'
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('reports/', views.reports_view, name='reports_view'),
     path('review/', views.review_entries, name='review_entries'),
     path('journal/', views.journal_view, name='journal_view'),
     path('journal/export/', views.export_journal_pdf, name='export_journal_pdf'),

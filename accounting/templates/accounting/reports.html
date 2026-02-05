@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prilika - Financial Reports</title>
+    {% load static %}
+    {% load accounting_extras %}
+    <link rel="stylesheet" href="{% static 'css/accounting.css' %}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="brand">Prilika</div>
+            <nav>
+                <a href="{% url 'accounting:index' %}" class="nav-link">Home</a>
+                <a href="{% url 'accounting:review_entries' %}" class="nav-link">Review</a>
+                <a href="{% url 'accounting:journal_view' %}" class="nav-link">Journal</a>
+                <a href="{% url 'accounting:trial_balance_view' %}" class="nav-link">Trial Balance</a>
+                <a href="{% url 'accounting:profit_loss_view' %}" class="nav-link">P&amp;L</a>
+                <a href="{% url 'accounting:balance_sheet_view' %}" class="nav-link">Balance Sheet</a>
+                <a href="{% url 'accounting:reports_view' %}" class="nav-link"
+                    style="font-weight: 600; color: var(--text-primary);">Reports</a>
+                <a href="{% url 'accounting:evals_view' %}" class="nav-link">Evals</a>
+                <a href="{% url 'logout' %}" class="nav-link" style="margin-left: auto;">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- ================================================
+             FINANCIAL DASHBOARD
+             ================================================ -->
+        <section class="dashboard-section">
+
+            <!-- Header -->
+            <div class="dashboard-header">
+                <h2 class="dashboard-title">Financial Ratios</h2>
+                <span class="dashboard-subtitle">as of today</span>
+            </div>
+
+            <!-- Ratio cards grid (breaks out of 800 px main width) -->
+            <div class="dashboard-wide">
+                <div class="dashboard-grid">
+
+                    {% for key, ratio in ratios.items %}
+                    <div class="ratio-card">
+
+                        <!-- Title -->
+                        <div class="ratio-card-title">{{ ratio.title }}</div>
+
+                        <!-- Big value -->
+                        {% if ratio.value is not None %}
+                            <div class="ratio-value health-{{ ratio.health }}">
+                                {{ ratio.value|floatformat:2 }}{% if ratio.is_percentage %}%{% endif %}
+                            </div>
+                        {% else %}
+                            <div class="ratio-value health-None">&mdash;</div>
+                        {% endif %}
+
+                        <!-- Rule under the value -->
+                        <div class="ratio-value-bar"></div>
+
+                        <!-- Fraction breakdown  ——  numerator ÷ denominator -->
+                        <div class="ratio-fraction">
+                            <div class="ratio-fraction-row">
+                                <span class="ratio-fraction-label">{{ ratio.numerator_label }}</span>
+                                <span class="ratio-fraction-amount">{{ ratio.numerator|inr }}</span>
+                            </div>
+                            <div class="ratio-fraction-bar"></div>
+                            <div class="ratio-fraction-row">
+                                <span class="ratio-fraction-label">{{ ratio.denominator_label }}</span>
+                                <span class="ratio-fraction-amount">{{ ratio.denominator|inr }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Symbolic formula -->
+                        <div class="ratio-formula"><span class="ratio-formula-label">Formula:</span> {{ ratio.formula }}</div>
+                    </div>
+                    {% endfor %}
+
+                </div><!-- .dashboard-grid -->
+            </div><!-- .dashboard-wide -->
+
+            <!-- ================================================
+                 NON-FINANCIAL MEASURES
+                 ================================================ -->
+            <div class="nonfinancial-section">
+                <div class="nonfinancial-header">
+                    <h3 class="nonfinancial-title">Non-Financial Measures</h3>
+                    <p class="nonfinancial-note">
+                        Qualitative indicators &mdash; tracked via client feedback, internal reviews, and periodic surveys.
+                        These complement financial ratios in a balanced performance view.
+                    </p>
+                </div>
+
+                <div class="nonfinancial-grid">
+
+                    <!-- Customer Satisfaction -->
+                    <div class="nonfinancial-card">
+                        <div class="nonfinancial-card-icon">&#128104;&#8205;&#128104;&#8205;&#128106;</div>
+                        <div class="nonfinancial-card-title">Customer Satisfaction</div>
+                        <div class="nonfinancial-card-value">&mdash;</div>
+                        <div class="nonfinancial-card-note">Measured via periodic client feedback surveys</div>
+                    </div>
+
+                    <!-- New Product Introduction -->
+                    <div class="nonfinancial-card">
+                        <div class="nonfinancial-card-icon">&#128161;</div>
+                        <div class="nonfinancial-card-title">New Product Introduction</div>
+                        <div class="nonfinancial-card-value">&mdash;</div>
+                        <div class="nonfinancial-card-note">New service lines launched per quarter</div>
+                    </div>
+
+                    <!-- Innovation & Learning -->
+                    <div class="nonfinancial-card">
+                        <div class="nonfinancial-card-icon">&#128300;</div>
+                        <div class="nonfinancial-card-title">Innovation &amp; Learning</div>
+                        <div class="nonfinancial-card-value">&mdash;</div>
+                        <div class="nonfinancial-card-note">Internal review &amp; skill-development cycles</div>
+                    </div>
+
+                </div><!-- .nonfinancial-grid -->
+            </div><!-- .nonfinancial-section -->
+
+        </section><!-- .dashboard-section -->
+    </main>
+</body>
+
+</html>

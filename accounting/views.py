@@ -63,9 +63,15 @@ def logout_view(request):
 
 @login_required
 def index(request):
-    """Render the main UI with financial dashboard - requires authentication"""
+    """Render the main transaction-entry UI - requires authentication"""
+    return render(request, 'accounting/index.html')
+
+
+@login_required
+def reports_view(request):
+    """Render the financial-reports dashboard - requires authentication"""
     ratios = get_financial_ratios(dt_date.today())
-    return render(request, 'accounting/index.html', {'ratios': ratios})
+    return render(request, 'accounting/reports.html', {'ratios': ratios})
 
 
 @login_required
