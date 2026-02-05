@@ -20,6 +20,7 @@ from .trial_balance_service import get_trial_balance
 from .pnl_service import get_profit_loss
 from .ledger_service import get_account_ledger
 from .balance_sheet_service import get_balance_sheet
+from .ratios_service import get_financial_ratios
 
 logger = logging.getLogger('accounting')
 
@@ -62,8 +63,9 @@ def logout_view(request):
 
 @login_required
 def index(request):
-    """Render the main UI - requires authentication"""
-    return render(request, 'accounting/index.html')
+    """Render the main UI with financial dashboard - requires authentication"""
+    ratios = get_financial_ratios(dt_date.today())
+    return render(request, 'accounting/index.html', {'ratios': ratios})
 
 
 @login_required

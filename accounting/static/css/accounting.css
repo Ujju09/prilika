@@ -476,3 +476,232 @@ main {
         opacity: 0.5;
     }
 }
+
+/* =============================================================
+   FINANCIAL DASHBOARD
+   ============================================================= */
+
+/* -- Section wrapper ----------------------------------------- */
+.dashboard-section {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+/* -- Header row (title + "as of today") ---------------------- */
+.dashboard-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.dashboard-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.dashboard-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+/* -- Wide breakout container --------------------------------- */
+/*    main is capped at --max-width (800 px).  The card grid
+     needs more horizontal room.  This container uses the
+     classic "100 vw + negative-translate" breakout so the
+     input section stays narrow while the grid breathes.      */
+.dashboard-wide {
+    width: 100vw;
+    max-width: 1100px;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    padding: 0 var(--space-md);
+}
+
+/* -- Responsive card grid ------------------------------------ */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+/* =============================================================
+   RATIO CARD
+   ============================================================= */
+
+.ratio-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 18px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.2s;
+}
+
+.ratio-card:hover {
+    border-color: var(--text-muted);
+}
+
+/* Card title (ratio name) */
+.ratio-card-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+}
+
+/* Big ratio value */
+.ratio-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+/* Health colour classes */
+.health-good    { color: var(--success); }   /* Emerald 500 */
+.health-warning { color: var(--warning); }   /* Amber   500 */
+.health-danger  { color: var(--danger);  }   /* Red     500 */
+.health-None    { color: var(--text-muted); }
+
+/* Rule that sits between the big value and the fraction block */
+.ratio-value-bar {
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+/* -- Fraction breakdown (numerator ÷ denominator) ----------- */
+.ratio-fraction {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ratio-fraction-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.82rem;
+}
+
+.ratio-fraction-label {
+    color: var(--text-secondary);
+}
+
+.ratio-fraction-amount {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+}
+
+/* Horizontal line between numerator and denominator */
+.ratio-fraction-bar {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 2px 0;
+}
+
+/* -- Symbolic formula (bottom of card) ----------------------- */
+.ratio-formula {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: auto;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+}
+
+.ratio-formula-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* =============================================================
+   NON-FINANCIAL MEASURES
+   ============================================================= */
+
+.nonfinancial-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nonfinancial-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nonfinancial-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.nonfinancial-note {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.nonfinancial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+/* Individual non-financial card  —  dashed border, no fill */
+.nonfinancial-card {
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background-color: transparent;
+    opacity: 0.7;
+    transition: opacity 0.2s, border-color 0.2s;
+}
+
+.nonfinancial-card:hover {
+    opacity: 1;
+    border-color: var(--text-muted);
+}
+
+.nonfinancial-card-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.nonfinancial-card-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.nonfinancial-card-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+.nonfinancial-card-note {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    line-height: 1.4;
+}
