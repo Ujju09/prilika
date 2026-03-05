@@ -14,8 +14,11 @@ from decimal import Decimal
 from datetime import date
 from typing import Optional, Dict
 
+from django.db.models import Sum
+
 from .balance_sheet_service import get_balance_sheet
 from .pnl_service import get_profit_loss
+from .models import Account, JournalLine
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +58,23 @@ def get_financial_ratios(as_of_date: Optional[date] = None) -> Dict:
     total_equity        = bs['total_equity']
     total_income        = pnl['total_income']
     capital_employed    = total_assets - current_liabilities   # TA − CL
+
+    # Labor cost: sum all expense accounts with sub_type = 'salary'
+    salary_account_codes = list(
+        Account.objects.filter(is_active=True, account_type='expense', sub_type='salary')
+        .values_list('code', flat=True)
+    )
+    labor_cost = Decimal('0')
+    if salary_account_codes:
+        filters = {
+            'account_code__in': salary_account_codes,
+            'journal_entry__status': 'posted',
+            'journal_entry__transaction_date__lte': as_of_date,
+        }
+        agg = JournalLine.objects.filter(**filters).aggregate(
+            total_debit=Sum('debit'), total_credit=Sum('credit')
+        )
+        labor_cost = (agg['total_debit'] or Decimal('0')) - (agg['total_credit'] or Decimal('0'))
 
     # --- helpers ------------------------------------------------------------
     def _div(num: Decimal, den: Decimal) -> Optional[float]:
@@ -157,6 +177,19 @@ def get_financial_ratios(as_of_date: Optional[date] = None) -> Dict:
         is_pct=False,
     )
 
+    # 8. Labor Cost Percentage
+    ratios['labor_cost_pct'] = _ratio(
+        title='Labor Cost Percentage',
+        value=_pct(labor_cost, total_income),
+        numerator=labor_cost,
+        denominator=total_income,
+        num_label='Salary Expenses',
+        den_label='Total Income',
+        formula='Salary Expenses  /  Total Income  ×  100',
+        health=_health_labor_cost_pct(_pct(labor_cost, total_income)),
+        is_pct=True,
+    )
+
     return ratios
 
 
@@ -223,4 +256,11 @@ def _health_debt_to_assets(v: Optional[float]) -> Optional[str]:
     if v is None:   return None
     if v < 0.5:     return 'good'
     if v <= 0.75:   return 'warning'
+    return 'danger'
+
+
+def _health_labor_cost_pct(v: Optional[float]) -> Optional[str]:
+    if v is None:   return None
+    if v <= 30.0:   return 'good'
+    if v <= 50.0:   return 'warning'
     return 'danger'
