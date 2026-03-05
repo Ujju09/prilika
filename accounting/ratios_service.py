@@ -61,7 +61,7 @@ def get_financial_ratios(as_of_date: Optional[date] = None) -> Dict:
 
     # Labor cost: sum all expense accounts with sub_type = 'salary'
     salary_account_codes = list(
-        Account.objects.filter(is_active=True, account_type='expense', sub_type='salary')
+        Account.objects.filter(is_active=True, account_type='expense', account_subtype='salary')
         .values_list('code', flat=True)
     )
     labor_cost = Decimal('0')
