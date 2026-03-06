@@ -383,6 +383,36 @@
                 {% endif %}
             </div>
         </div>
+
+        {% if rolling_twelve %}
+        <div style="margin-top:40px;">
+            <h2 style="font-size:16px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--text-main);padding-bottom:10px;margin-bottom:16px;">
+                Rolling 12-Month View
+            </h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-particulars">Month</th>
+                        <th class="col-amount">Income (₹)</th>
+                        <th class="col-amount">Expenses (₹)</th>
+                        <th class="col-amount">Net (₹)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rolling_twelve %}
+                    <tr style="{% if not row.is_profit %}background:#fff5f5;{% endif %}">
+                        <td>{{ row.month_label }}</td>
+                        <td class="col-amount">{{ row.total_income|floatformat:2 }}</td>
+                        <td class="col-amount">{{ row.total_expenses|floatformat:2 }}</td>
+                        <td class="col-amount" style="font-weight:600;color:{% if row.is_profit %}var(--success){% else %}var(--error){% endif %};">
+                            {% if row.is_profit %}+{% else %}-{% endif %}{{ row.net_profit_loss|floatformat:2|cut:"-" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </div>
 {% if not is_shared %}
 <!-- Share Modal -->

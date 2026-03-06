@@ -17,7 +17,7 @@ from django.conf import settings
 from .models import JournalEntry, AgentLog, SharedReport
 from .service import process_and_save
 from .trial_balance_service import get_trial_balance
-from .pnl_service import get_profit_loss
+from .pnl_service import get_profit_loss, get_rolling_twelve_pnl
 from .ledger_service import get_account_ledger
 from .balance_sheet_service import get_balance_sheet
 from .ratios_service import get_financial_ratios
@@ -206,6 +206,7 @@ def profit_loss_view(request):
         'from_date': from_date.isoformat() if from_date else None,
         'to_date': to_date.isoformat(),
     }
+    pnl_data['rolling_twelve'] = get_rolling_twelve_pnl(to_date)
 
     return render(request, 'accounting/profit_loss.html', pnl_data)
 

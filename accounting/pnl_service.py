@@ -3,6 +3,7 @@ Service module for Profit & Loss Statement calculations.
 Generates P&L statement following ICAI conventions.
 """
 
+import calendar
 from django.db.models import Sum, Q
 from decimal import Decimal
 from datetime import date
@@ -190,6 +191,86 @@ def _get_period_label(from_date: Optional[date], to_date: date) -> str:
         return f"For the period from {from_date.strftime('%d-%m-%Y')} to {to_date.strftime('%d-%m-%Y')}"
     else:
         return f"For the period up to {to_date.strftime('%d-%m-%Y')}"
+
+
+def get_rolling_twelve_pnl(as_of_date: Optional[date] = None) -> List[Dict]:
+    """
+    Calculate P&L for each of the last 12 calendar months ending on as_of_date.
+
+    Returns a list of 12 dicts (oldest first), each with:
+        - month_label: e.g. "Mar 2025"
+        - from_date / to_date
+        - total_income, total_expenses, net_profit_loss, is_profit
+    """
+    if as_of_date is None:
+        as_of_date = date.today()
+
+    # Build 12 month-start / month-end pairs ending on as_of_date's month
+    months = []
+    year, month = as_of_date.year, as_of_date.month
+    for _ in range(12):
+        last_day = calendar.monthrange(year, month)[1]
+        month_start = date(year, month, 1)
+        month_end = date(year, month, last_day)
+        months.append((month_start, month_end))
+        # Step back one month
+        month -= 1
+        if month == 0:
+            month = 12
+            year -= 1
+
+    months.reverse()  # oldest first
+
+    # Pre-fetch all income and expense accounts once
+    income_accounts = list(Account.objects.filter(is_active=True, account_type='income').order_by('code'))
+    expense_accounts = list(Account.objects.filter(is_active=True, account_type='expense').order_by('code'))
+    income_codes = [a.code for a in income_accounts]
+    expense_codes = [a.code for a in expense_accounts]
+
+    result = []
+    for month_start, month_end in months:
+        # Income
+        inc_qs = JournalLine.objects.filter(
+            account_code__in=income_codes,
+            journal_entry__status='posted',
+            journal_entry__transaction_date__gte=month_start,
+            journal_entry__transaction_date__lte=month_end,
+        ).values('account_code').annotate(
+            total_debit=Sum('debit'),
+            total_credit=Sum('credit')
+        )
+        total_income = sum(
+            (row['total_credit'] or Decimal('0')) - (row['total_debit'] or Decimal('0'))
+            for row in inc_qs
+        )
+
+        # Expenses
+        exp_qs = JournalLine.objects.filter(
+            account_code__in=expense_codes,
+            journal_entry__status='posted',
+            journal_entry__transaction_date__gte=month_start,
+            journal_entry__transaction_date__lte=month_end,
+        ).values('account_code').annotate(
+            total_debit=Sum('debit'),
+            total_credit=Sum('credit')
+        )
+        total_expenses = sum(
+            (row['total_debit'] or Decimal('0')) - (row['total_credit'] or Decimal('0'))
+            for row in exp_qs
+        )
+
+        net = total_income - total_expenses
+        result.append({
+            'month_label': month_start.strftime('%b %Y'),
+            'from_date': month_start,
+            'to_date': month_end,
+            'total_income': total_income,
+            'total_expenses': total_expenses,
+            'net_profit_loss': net,
+            'is_profit': net >= 0,
+        })
+
+    return result
 
 
 def get_pnl_summary(from_date: Optional[date] = None, to_date: Optional[date] = None) -> str:
