@@ -11,6 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -129,6 +130,423 @@
             </div><!-- .nonfinancial-section -->
 
         </section><!-- .dashboard-section -->
+
+        <!-- ================================================
+             LOGARITHMIC GROWTH METRICS DASHBOARD
+             ================================================ -->
+        <section class="log-dashboard-section">
+
+            <div class="log-dashboard-header">
+                <h2 class="dashboard-title">Logarithmic Growth Metrics</h2>
+                <span class="dashboard-subtitle">rolling 12 months &middot; log-space analysis</span>
+            </div>
+
+            <!-- GROUP 1 — COMPOUNDING HEALTH -->
+            <div class="log-group">
+                <div class="log-group-label">
+                    Group 1 &mdash; Compounding Health
+                    <span class="log-group-sublabel">(what arithmetic averages hide)</span>
+                </div>
+                <div class="dashboard-wide">
+                    <div class="log-metrics-grid">
+
+                        <!-- Geometric Mean Income -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Geometric Mean Income</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.geo_mean_income is not None %}{{ log_metrics.geo_mean_income|floatformat:4 }}{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">exp(mean of log rates)</div>
+                            <div class="log-metric-description">True monthly compounding rate. Always lower than arithmetic mean when there is volatility.</div>
+                        </div>
+
+                        <!-- Volatility Penalty -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Volatility Penalty</span>
+                                <span class="log-tag log-tag-kelly">Kelly metric</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.volatility_penalty is not None %}{{ log_metrics.volatility_penalty|floatformat:4 }}{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">variance / 2</div>
+                            <div class="log-metric-description">How much volatility costs your true growth. Reducing volatility is as powerful as increasing income.</div>
+                        </div>
+
+                        <!-- Cumulative Multiplier -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Cumulative Multiplier</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.cum_multiplier is not None %}{{ log_metrics.cum_multiplier|floatformat:4 }}x{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">e^(sum of log rates)</div>
+                            <div class="log-metric-description">True compounding since {{ log_metrics.data_start_month }}. e^(sum of log rates).</div>
+                        </div>
+
+                        <!-- Income Floor p10 -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Income Floor (p10)</span>
+                                <span class="log-tag log-tag-ruin">Ruin metric</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.income_floor_p10 is not None %}{% load accounting_extras %}{{ log_metrics.income_floor_p10|inr }}{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">10th percentile of monthly income</div>
+                            <div class="log-metric-description">10th percentile income. Plan fixed costs against this, not the average.</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div><!-- GROUP 1 -->
+
+            <!-- GROUP 2 — STABILITY & REGIME -->
+            <div class="log-group">
+                <div class="log-group-label">
+                    Group 2 &mdash; Stability &amp; Regime
+                    <span class="log-group-sublabel">(when something structural changes)</span>
+                </div>
+                <div class="dashboard-wide">
+                    <div class="log-metrics-grid">
+
+                        <!-- Log Rate Std Dev -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Log Rate Std Deviation</span>
+                                <span class="log-tag log-tag-log">Log metric</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.log_rate_std is not None %}{{ log_metrics.log_rate_std|floatformat:4 }}{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">std(log rates)</div>
+                            <div class="log-metric-description">Volatility of your growth rate itself. Below 0.10 = stable regime.</div>
+                        </div>
+
+                        <!-- 3-Month Drift Signal -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">3-Month Drift Signal</span>
+                                <span class="log-tag log-tag-log">Log metric</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.drift_3m is not None %}{{ log_metrics.drift_3m|floatformat:4 }} /mo{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">avg(last 3 log rates)</div>
+                            <div class="log-metric-description">Avg log rate, last 3 months. Positive = momentum. Negative = regime shift.</div>
+                        </div>
+
+                        <!-- Expense Log Volatility -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Expense Log Volatility</span>
+                                <span class="log-tag log-tag-stability">Stability</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.expense_log_vol is not None %}{{ log_metrics.expense_log_vol|floatformat:4 }}{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">std(expense log rates)</div>
+                            <div class="log-metric-description">Std dev of expense log rates. High = unpredictable cost structure.</div>
+                        </div>
+
+                        <!-- Income-Expense Divergence -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Income-Expense Divergence</span>
+                                <span class="log-tag log-tag-log">Log metric</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.inc_exp_divergence is not None %}{% if log_metrics.inc_exp_divergence >= 0 %}+{% endif %}{{ log_metrics.inc_exp_divergence|floatformat:4 }} /mo{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">income log rate &minus; expense log rate</div>
+                            <div class="log-metric-description">Are expenses growing faster or slower than income? Gap = margin trajectory.</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div><!-- GROUP 2 -->
+
+            <!-- GROUP 3 — RUIN & RESILIENCE -->
+            <div class="log-group">
+                <div class="log-group-label">
+                    Group 3 &mdash; Ruin &amp; Resilience
+                    <span class="log-group-sublabel">(what Kelly demands you always know)</span>
+                </div>
+                <div class="dashboard-wide">
+                    <div class="log-metrics-grid log-metrics-grid-3">
+
+                        <!-- Ruin Reserve -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Ruin Reserve (months)</span>
+                                <span class="log-tag log-tag-ruin">Ruin metric</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.ruin_reserve_months is not None %}{{ log_metrics.ruin_reserve_months|floatformat:1 }} mo{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">cumulative net / p10 monthly expenses</div>
+                            <div class="log-metric-description">How many months you can sustain zero income at current expense floor. Min = 3.</div>
+                        </div>
+
+                        <!-- Surplus Retention Rate -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Surplus Retention Rate</span>
+                                <span class="log-tag log-tag-efficiency">Efficiency</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.surplus_retention_pct is not None %}{{ log_metrics.surplus_retention_pct|floatformat:1 }}%{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">net &divide; income</div>
+                            <div class="log-metric-description">Net &divide; Income. What fraction of income actually compounds. Track monthly.</div>
+                        </div>
+
+                        <!-- Recovery Lag -->
+                        <div class="log-metric-card">
+                            <div class="log-metric-header">
+                                <span class="log-metric-title">Recovery Lag (log units)</span>
+                                <span class="log-tag log-tag-ruin">Ruin metric</span>
+                            </div>
+                            <div class="log-metric-value">
+                                {% if log_metrics.recovery_lag is not None %}{{ log_metrics.recovery_lag|floatformat:1 }} mo{% else %}&mdash;{% endif %}
+                            </div>
+                            <div class="log-metric-formula">shock log magnitude &divide; avg monthly log rate</div>
+                            <div class="log-metric-description">How many months of normal growth to recover from worst shock.</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div><!-- GROUP 3 -->
+
+            <!-- CHART 1 — LOG GROWTH RATE + ROLLING AVG -->
+            <div class="dashboard-wide">
+                <div class="log-chart-container">
+                    <div class="log-chart-title">Live Chart &mdash; Log Growth Rate + 3-Month Rolling Average</div>
+                    <canvas id="logRateChart" height="80"></canvas>
+                </div>
+            </div>
+
+            <!-- CHARTS 2 + 3 — SIDE BY SIDE -->
+            <div class="dashboard-wide">
+                <div class="log-charts-row">
+                    <div class="log-chart-container">
+                        <div class="log-chart-title">Surplus Retention Rate &mdash; Monthly</div>
+                        <canvas id="retentionChart" height="140"></canvas>
+                        <div class="log-chart-note">Natural numbers show ₹ surplus. Retention rate shows whether your income efficiency is improving or eroding. Target: above 70% consistently.</div>
+                    </div>
+                    <div class="log-chart-container">
+                        <div class="log-chart-title">Income vs Expense Cumulative Log</div>
+                        <canvas id="cumlogChart" height="140"></canvas>
+                        <div class="log-chart-note">When the income line stays above the expense line, your margin is compounding in your favour.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- METRIC DEFINITIONS -->
+            <div class="dashboard-wide">
+                <div class="log-definitions-section">
+                    <div class="log-definitions-title">Metric Definitions &mdash; Add these to any accounting dashboard</div>
+                    <div class="log-definitions-grid">
+
+                        <div class="log-def-card">
+                            <div class="log-def-name">Geometric Mean Income</div>
+                            <div class="log-def-formula">exp(mean of log rates)</div>
+                            <div class="log-def-desc">What you actually compound at &mdash; always lower than arithmetic mean when there is volatility. The gap between arithmetic and geometric mean is the hidden cost of income variability.</div>
+                        </div>
+
+                        <div class="log-def-card">
+                            <div class="log-def-name">Volatility Penalty</div>
+                            <div class="log-def-formula">variance / 2</div>
+                            <div class="log-def-desc">The exact amount volatility subtracts from your compounding rate. From Kelly: geometric mean = arithmetic mean &minus; (variance &divide; 2). Reducing volatility is as powerful as increasing income.</div>
+                        </div>
+
+                        <div class="log-def-card">
+                            <div class="log-def-name">Income Floor (p10)</div>
+                            <div class="log-def-formula">10th percentile of monthly income</div>
+                            <div class="log-def-desc">The income level you can expect 90% of months to exceed. Size every fixed obligation against this number. Planning against the average means you're exposed 50% of the time.</div>
+                        </div>
+
+                        <div class="log-def-card">
+                            <div class="log-def-name">3-Month Drift Signal</div>
+                            <div class="log-def-formula">avg(last 3 log rates)</div>
+                            <div class="log-def-desc">When this turns negative for 2+ consecutive readings, something structural has changed &mdash; not a bad month. This is your early warning system. No natural number shows this.</div>
+                        </div>
+
+                        <div class="log-def-card">
+                            <div class="log-def-name">Income-Expense Divergence</div>
+                            <div class="log-def-formula">income log rate &minus; expense log rate</div>
+                            <div class="log-def-desc">Positive = income growing faster than expenses (margin expanding). Negative = expense growth outpacing income (margin compressing silently). A standard P&amp;L won't show the compounding direction.</div>
+                        </div>
+
+                        <div class="log-def-card">
+                            <div class="log-def-name">Recovery Lag</div>
+                            <div class="log-def-formula">shock log magnitude &divide; avg monthly log rate</div>
+                            <div class="log-def-desc">How many months of normal growth are needed to mathematically recover from a negative shock. Measures the real cost of your worst month in time, not money.</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </section><!-- .log-dashboard-section -->
+
+        <!-- Chart data (XSS-safe JSON injection) -->
+        {{ log_metrics.chart_labels|json_script:"lm-labels" }}
+        {{ log_metrics.chart_income_log|json_script:"lm-income-log" }}
+        {{ log_metrics.chart_income_rolling3|json_script:"lm-rolling3" }}
+        {{ log_metrics.chart_expense_log|json_script:"lm-expense-log" }}
+        {{ log_metrics.chart_retention_labels|json_script:"lm-ret-labels" }}
+        {{ log_metrics.chart_retention_values|json_script:"lm-ret-values" }}
+        {{ log_metrics.chart_income_cumlog|json_script:"lm-inc-cumlog" }}
+        {{ log_metrics.chart_expense_cumlog|json_script:"lm-exp-cumlog" }}
+
+        <script>
+        (function () {
+            'use strict';
+
+            const parse = id => JSON.parse(document.getElementById(id).textContent);
+
+            const labels       = parse('lm-labels');
+            const incomeLog    = parse('lm-income-log');
+            const rolling3     = parse('lm-rolling3');
+            const expenseLog   = parse('lm-expense-log');
+            const retLabels    = parse('lm-ret-labels');
+            const retValues    = parse('lm-ret-values');
+            const incCumlog    = parse('lm-inc-cumlog');
+            const expCumlog    = parse('lm-exp-cumlog');
+
+            const DARK_TICK  = '#a1a1aa';
+            const DARK_GRID  = '#27272a';
+            const axisDefaults = {
+                ticks: { color: DARK_TICK, font: { family: 'JetBrains Mono, monospace', size: 11 } },
+                grid:  { color: DARK_GRID }
+            };
+            const legendDefaults = {
+                labels: { color: DARK_TICK, font: { family: 'JetBrains Mono, monospace', size: 11 }, boxWidth: 20, padding: 14 }
+            };
+
+            // --- Chart 1: Log Growth Rate ---
+            new Chart(document.getElementById('logRateChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Monthly log rate (income)',
+                            data: incomeLog,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37,99,235,0.08)',
+                            pointRadius: 4,
+                            pointBackgroundColor: '#2563eb',
+                            tension: 0,
+                            spanGaps: false,
+                        },
+                        {
+                            label: '3-month rolling avg',
+                            data: rolling3,
+                            borderColor: '#10b981',
+                            borderDash: [6, 3],
+                            pointRadius: 0,
+                            tension: 0.3,
+                            spanGaps: true,
+                        },
+                        {
+                            label: 'Expense log rate',
+                            data: expenseLog,
+                            borderColor: '#ef4444',
+                            borderDash: [4, 4],
+                            pointRadius: 3,
+                            pointBackgroundColor: '#ef4444',
+                            tension: 0,
+                            spanGaps: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: legendDefaults },
+                    scales: { x: axisDefaults, y: axisDefaults }
+                }
+            });
+
+            // --- Chart 2: Surplus Retention Rate ---
+            const retColors = retValues.map(v =>
+                v === null ? '#52525b' :
+                v >= 70    ? '#10b981' :
+                v >= 50    ? '#f59e0b' : '#ef4444'
+            );
+            const target70 = retLabels.map(() => 70);
+
+            new Chart(document.getElementById('retentionChart'), {
+                type: 'bar',
+                data: {
+                    labels: retLabels,
+                    datasets: [
+                        {
+                            label: 'Surplus retention %',
+                            data: retValues,
+                            backgroundColor: retColors,
+                            order: 2,
+                        },
+                        {
+                            label: '70% target line',
+                            data: target70,
+                            type: 'line',
+                            borderColor: '#52525b',
+                            borderDash: [6, 3],
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            fill: false,
+                            order: 1,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: legendDefaults },
+                    scales: { x: axisDefaults, y: { ...axisDefaults, ticks: { ...axisDefaults.ticks, callback: v => v + '%' } } }
+                }
+            });
+
+            // --- Chart 3: Income vs Expense Cumulative Log ---
+            new Chart(document.getElementById('cumlogChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Income cumul. log',
+                            data: incCumlog,
+                            borderColor: '#2563eb',
+                            pointRadius: 3,
+                            pointBackgroundColor: '#2563eb',
+                            fill: false,
+                            spanGaps: true,
+                        },
+                        {
+                            label: 'Expense cumul. log',
+                            data: expCumlog,
+                            borderColor: '#ef4444',
+                            borderDash: [6, 3],
+                            pointRadius: 3,
+                            pointBackgroundColor: '#ef4444',
+                            fill: false,
+                            spanGaps: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: legendDefaults },
+                    scales: { x: axisDefaults, y: axisDefaults }
+                }
+            });
+        })();
+        </script>
+
     </main>
 </body>
 

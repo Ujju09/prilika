@@ -21,6 +21,7 @@ from .pnl_service import get_profit_loss, get_rolling_twelve_pnl
 from .ledger_service import get_account_ledger
 from .balance_sheet_service import get_balance_sheet
 from .ratios_service import get_financial_ratios
+from .log_metrics_service import get_log_metrics
 
 logger = logging.getLogger('accounting')
 
@@ -71,7 +72,8 @@ def index(request):
 def reports_view(request):
     """Render the financial-reports dashboard - requires authentication"""
     ratios = get_financial_ratios(dt_date.today())
-    return render(request, 'accounting/reports.html', {'ratios': ratios})
+    log_metrics = get_log_metrics(dt_date.today())
+    return render(request, 'accounting/reports.html', {'ratios': ratios, 'log_metrics': log_metrics})
 
 
 @login_required

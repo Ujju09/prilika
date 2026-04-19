@@ -705,3 +705,236 @@ main {
     margin-top: 2px;
     line-height: 1.4;
 }
+
+/* ================================================
+   LOGARITHMIC GROWTH METRICS DASHBOARD
+   ================================================ */
+
+.log-dashboard-section {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    margin-top: 48px;
+    padding-top: 36px;
+    border-top: 1px solid var(--border-color);
+}
+
+.log-dashboard-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+/* Group label row */
+.log-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.log-group-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.log-group-sublabel {
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+/* Metric card grid */
+.log-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.log-metrics-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 900px) {
+    .log-metrics-grid        { grid-template-columns: repeat(2, 1fr); }
+    .log-metrics-grid-3      { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 540px) {
+    .log-metrics-grid,
+    .log-metrics-grid-3      { grid-template-columns: 1fr; }
+}
+
+/* Individual metric card */
+.log-metric-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s;
+}
+
+.log-metric-card:hover {
+    border-color: var(--text-muted);
+}
+
+.log-metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+    min-height: 1.8rem;
+}
+
+.log-metric-title {
+    font-size: 0.67rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+.log-metric-value {
+    font-size: 1.55rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.log-metric-formula {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    color: var(--text-muted);
+    background: var(--bg-input);
+    padding: 2px 7px;
+    border-radius: 3px;
+    width: fit-content;
+}
+
+.log-metric-description {
+    font-size: 0.73rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin-top: auto;
+}
+
+/* Tag badges */
+.log-tag {
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1.6;
+}
+
+.log-tag-kelly     { background: rgba(245,158,11,0.12); color: #fbbf24; }
+.log-tag-ruin      { background: rgba(239,68,68,0.12);  color: #f87171; }
+.log-tag-log       { background: rgba(37,99,235,0.12);  color: #60a5fa; }
+.log-tag-stability { background: rgba(16,185,129,0.12); color: #34d399; }
+.log-tag-efficiency{ background: rgba(139,92,246,0.12); color: #a78bfa; }
+
+/* Chart containers */
+.log-chart-container {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px 18px 14px;
+}
+
+.log-chart-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    margin-bottom: 18px;
+}
+
+.log-chart-note {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--border-color);
+}
+
+/* Side-by-side bottom charts */
+.log-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 700px) {
+    .log-charts-row { grid-template-columns: 1fr; }
+}
+
+/* Metric definitions */
+.log-definitions-section {
+    padding: 4px 0 8px;
+}
+
+.log-definitions-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.log-definitions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+}
+
+.log-def-card {
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.log-def-name {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.log-def-formula {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    color: var(--accent);
+    background: rgba(37,99,235,0.08);
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: fit-content;
+}
+
+.log-def-desc {
+    font-size: 0.71rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-top: 2px;
+}
