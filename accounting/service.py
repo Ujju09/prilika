@@ -66,7 +66,7 @@ class AccountingAgentService:
     
     def __init__(self, api_key: str, skills_path: Optional[str] = None):
         self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = "claude-sonnet-4-20250514"
+        self.model = "claude-sonnet-4-6"
         
         today_str = date.today().isoformat()
         
